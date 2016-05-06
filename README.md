@@ -1,5 +1,5 @@
 # Approximate Riemann Solvers
-This repo is my personal collection of Riemann solvers using MUSCL and WENO schemes written as short Matlab. They are now publicly available as I have moved to do research in another field of CFD. Any feed back on these snipets is always welcome. All references can be found as comments inside the scripts. Happy coding!
+This repo is my personal collection of Riemann solvers using MUSCL and WENO schemes written as short Matlabs scripts. They are now publicly available as I've moved to  another field of CFD. All references can be found as comments inside the scripts. Any feed back on these snipets is always welcome. Happy coding!
 
 Completed 1D solvers list:
 * MUSCL-Lax Friedrichs solver
