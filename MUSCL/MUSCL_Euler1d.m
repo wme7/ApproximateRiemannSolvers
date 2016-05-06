@@ -74,12 +74,12 @@ tic
 while t < tEnd
     
     % RK2 1st step
-    qs = q - dt*MUSCL_EulerSys(q,max(lambda(:)),gamma,dx,nx,limiter,fluxMth);
+    qs = q - dt*MUSCL_EulerRes1d(q,max(lambda(:)),gamma,dx,nx,limiter,fluxMth);
     
     qs(:,1)=qs(:,2); qs(:,nx)=qs(:,nx-1);   % Natural BCs
     
     % RK2 2nd step  / update q
-    q = (q + qs - dt*MUSCL_EulerSys(qs,max(lambda(:)),gamma,dx,nx,limiter,fluxMth))/2;
+    q = (q + qs - dt*MUSCL_EulerRes1d(qs,max(lambda(:)),gamma,dx,nx,limiter,fluxMth))/2;
     
     q(:,1)=q(:,2); q(:,nx)=q(:,nx-1);   % Natural BCs
         

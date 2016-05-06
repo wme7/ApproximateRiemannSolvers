@@ -35,8 +35,8 @@
 %% Parameters
 CFL     = 0.60;     % CFL number
 tEnd    = 0.25;     % Final time
-nx      = 400;      % Number of cells/Elements in x
-ny      = 400;      % Number of cells/Elements in y
+nx      = 200;      % Number of cells/Elements in x
+ny      = 200;      % Number of cells/Elements in y
 n       = 5;        % Number of degrees of freedom
 IC      = 12;       % 19 IC cases are available
 limiter ='MC';      % MM, MC, VA.
@@ -71,7 +71,7 @@ dt0=CFL*min(dx./a0,dy./a0);
 
 % Initialize parpool
 poolobj = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(poolobj); parpool('local',2); end
+if isempty(poolobj); parpool('local',4); end
 
 % Load IC
 q=q0; t=dt0; it=0; dt=dt0; a=a0;
@@ -81,13 +81,13 @@ tic
 while t < tEnd
     
     % RK2 1st step
-    qs = q - dt*MUSCL_EulerSys2d(q,a,gamma,dx,dy,nx,ny,limiter,fluxMth);
+    qs = q - dt*MUSCL_EulerRes2d(q,a,gamma,dx,dy,nx,ny,limiter,fluxMth);
     
     qs(:,1,:)=qs(:,2,:); qs(:,nx,:)=qs(:,nx-1,:);   % Natural BCs
     qs(1,:,:)=qs(2,:,:); qs(ny,:,:)=qs(ny-1,:,:);   % Natural BCs
     
     % RK2 2nd step / update q
-    q = (q + qs - dt*MUSCL_EulerSys2d(qs,a,gamma,dx,dy,nx,ny,limiter,fluxMth))/2;
+    q = (q + qs - dt*MUSCL_EulerRes2d(qs,a,gamma,dx,dy,nx,ny,limiter,fluxMth))/2;
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
@@ -103,7 +103,7 @@ while t < tEnd
 	t=t+dt; it=it+1;
     
     % Plot figure
-    if rem(it,1) == 0
+    if rem(it,10) == 0
         if plot_fig == 1;
             subplot(2,2,1); contourf(x,y,r(2:ny-1,2:nx-1)); axis('square');
             subplot(2,2,2); contourf(x,y,u(2:ny-1,2:nx-1)); axis('square');

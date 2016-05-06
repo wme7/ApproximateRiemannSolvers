@@ -82,13 +82,13 @@ tic
 while t < tEnd
     
     % RK2 1st step
-    qs = q - dt*MUSCL2d_EulerSys2d_v2(q,gamma,dt,dx,dy,nx,ny,limiter,assmbl);
+    qs = q - dt*MUSCL2d_EulerRes2d_v2(q,gamma,dt,dx,dy,nx,ny,limiter,assmbl);
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
     
     % RK2 2nd step / update q
-    q = 0.5*(q + qs - dt*MUSCL2d_EulerSys2d_v2(qs,gamma,dt,dx,dy,nx,ny,limiter,assmbl));
+    q = 0.5*(q + qs - dt*MUSCL2d_EulerRes2d_v2(qs,gamma,dt,dx,dy,nx,ny,limiter,assmbl));
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs

@@ -1,4 +1,4 @@
-function [res] = MUSCL_EulerSys2d(q,smax,gamma,dx,dy,N,M,limiter,fluxMethod)
+function [res] = MUSCL_EulerRes2d(q,smax,gamma,dx,dy,N,M,limiter,fluxMethod)
 %   MUSCL Monotonic Upstreat Centered Scheme for Conservation Laws
 %   Van Leer's MUSCL reconstruction scheme using piece wise linear
 %   reconstruction
