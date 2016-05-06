@@ -33,15 +33,15 @@
 %clear; close all; clc;
 
 %% Parameters
-CFL     = 0.60;     % CFL number
+CFL     = 0.50;     % CFL number
 tEnd    = 0.25;     % Final time
-nx      = 200;      % Number of cells/Elements in x
-ny      = 200;      % Number of cells/Elements in y
-n       = 5;        % Number of degrees of freedom
-IC      = 12;       % 19 IC cases are available
+nx      = 400;      % Number of cells/Elements in x
+ny      = 400;      % Number of cells/Elements in y
+n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
+IC      = 05;       % 19 IC cases are available
 limiter ='MC';      % MM, MC, VA.
 fluxMth ='HLLE';	% LF, RUS, ROE, HLLE, RHLLE(!).
-plot_fig= 0;        % 1:visualize evolution 
+plot_fig= 1;        % 1:visualize evolution 
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;

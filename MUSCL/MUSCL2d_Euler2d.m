@@ -39,7 +39,7 @@ nx      = 100;      % Number of cells/Elements in x
 ny      = 100;      % Number of cells/Elements in y
 n       = 5;        % Number of degrees of freedom
 assmbl  ='simpson';	% 'manual' or 'simpson'
-IC      = 06;       % 19 IC cases are available
+IC      = 05;       % 19 IC cases are available
 limiter ='MC';      % MM, MC, VA, VL.
 plot_fig= 1;        % 1:visualize evolution 
 
