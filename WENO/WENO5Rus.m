@@ -33,7 +33,7 @@
 % and Euler Equations,  Computers and Fluids, 110, pp. 181-188, 2015.  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes: 
-% 1. A fully conservative finite volume implementation of the method of
+% 1. A fully conservative finite difference implementation of the method of
 % lines (MOL) using WENO5 associated with SSP-RK33 time integration method. 
 % 2. Sharpenning of contact discontinuities is NOT implemented here.
 

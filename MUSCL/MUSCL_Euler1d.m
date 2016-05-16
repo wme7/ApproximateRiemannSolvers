@@ -69,7 +69,7 @@ lambda0=abs(u0)+a0; dt0=cfl*dx/max(lambda0(:));
 % Load IC
 q=q0; t=0; it=0; dt=dt0; lambda=lambda0;
 
-% Solver Loop
+%% Solver Loop
 tic
 while t < tEnd
     
@@ -112,8 +112,8 @@ r=q(1,:); u=q(2,:)./r; E=q(3,:)./r; p=(gamma-1)*r.*(E-0.5*u.^2);
 
 % Plots results
 figure(1);
-subplot(2,2,1); plot(xc,r,'ro',xe,re,'-k'); xlabel('x'); ylabel('\rho'); legend('MUSCL','Exact'); 
+subplot(2,2,1); plot(xc,r,'ro',xe,re,'-k'); xlabel('x'); ylabel('\rho'); legend(['MUSCL-',fluxMth],'Exact'); 
 title('SSP-RK2 TVD-MUSCL Euler Eqns.')
-subplot(2,2,2); plot(xc,u,'ro',xe,ue,'-k'); xlabel('x'); ylabel('u'); %legend('MUSCL','Exact');
-subplot(2,2,3); plot(xc,p,'ro',xe,pe,'-k'); xlabel('x'); ylabel('p'); %legend('MUSCL','Exact');
-subplot(2,2,4); plot(xc,E,'ro',xe,Ee,'-k'); xlabel('x'); ylabel('E'); %legend('MUSCL','Exact');
+subplot(2,2,2); plot(xc,u,'ro',xe,ue,'-k'); xlabel('x'); ylabel('u'); %legend(['MUSCL-',fluxMth],'Exact');
+subplot(2,2,3); plot(xc,p,'ro',xe,pe,'-k'); xlabel('x'); ylabel('p'); %legend(['MUSCL-',fluxMth],'Exact');
+subplot(2,2,4); plot(xc,E,'ro',xe,Ee,'-k'); xlabel('x'); ylabel('E'); %legend(['MUSCL-',fluxMth],'Exact');

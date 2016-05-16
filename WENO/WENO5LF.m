@@ -26,7 +26,7 @@
 % for convection dominated problems, SIAM Review, 51:82-126, (2009). 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes: 
-% 1. A fully conservative finite volume implementation of the method of
+% 1. A fully conservative finite difference implementation of the method of
 % lines (MOL) using WENO5 associated with SSP-RK33 time integration method. 
 % 2. Sharpenning of contact discontinuities is NOT implemented here.
 
