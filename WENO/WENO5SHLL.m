@@ -75,15 +75,15 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    dF=WENO5SHLL1d(q,dx);     q = qo-dt*dF; 
+    dF=WENO5SHLL1d(q,dx);     q=qo-dt*dF; 
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
     
     % 2nd Stage
-    dF=WENO5SHLL1d(q,dx);     q = 0.75*qo+0.25*(q-dt*dF);
+    dF=WENO5SHLL1d(q,dx);     q=0.75*qo+0.25*(q-dt*dF);
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
 
     % 3rd stage
-    dF=WENO5SHLL1d(q,dx);     q = (qo+2*(q-dt*dF))/3;
+    dF=WENO5SHLL1d(q,dx);     q=(qo+2*(q-dt*dF))/3;
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
    
     % compute primary properties
