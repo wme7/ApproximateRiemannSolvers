@@ -28,7 +28,7 @@ global gamma
 %clear; close all; clc;
 
 %% Parameters
-CFL     = 0.50;     % CFL number
+CFL     = 0.30;     % CFL number
 tEnd    = 0.25;     % Final time
 nx      = 100;      % Number of cells/Elements in x
 ny      = 100;      % Number of cells/Elements in y
@@ -64,8 +64,8 @@ a0 = max(abs([lambda1(:);lambda2(:)]));
 dt0=CFL*min(dx./a0,dy./a0); 
 
 % Initialize parpool
-poolobj = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(poolobj); parpool('local',4); end
+% poolobj = gcp('nocreate'); % If no pool, do not create new one.
+% if isempty(poolobj); parpool('local',4); end
 
 % Load IC
 q=q0; t=dt0; it=0; dt=dt0; a=a0;
@@ -77,7 +77,7 @@ while t < tEnd
     qo = q;
     
     % 1st stage
-    dF=FV_WENO5HLL_2d(q,nx,ny,dx,dy,fluxMth);	q=qo-dt*dF;
+    dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=qo-dt*dF;
    
     q(:,1,:)=qo(:,3,:); q(:, nx ,:)=qo(:,nx-2,:);	% Natural BCs
     q(:,2,:)=qo(:,3,:); q(:,nx-1,:)=qo(:,nx-2,:);	% Natural BCs
@@ -85,7 +85,7 @@ while t < tEnd
     q(2,:,:)=qo(3,:,:); q(ny-1,:,:)=qo(ny-2,:,:);	% Natural BCs
     
     % 2nd Stage
-    dF=FV_WENO5HLL_2d(q,nx,ny,dx,dy,fluxMth);	q=0.75*qo+0.25*(q-dt*dF);
+    dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=0.75*qo+0.25*(q-dt*dF);
     
 	q(:,1,:)=qo(:,3,:); q(:, nx ,:)=qo(:,nx-2,:);	% Natural BCs
     q(:,2,:)=qo(:,3,:); q(:,nx-1,:)=qo(:,nx-2,:);	% Natural BCs
@@ -93,7 +93,7 @@ while t < tEnd
     q(2,:,:)=qo(3,:,:); q(ny-1,:,:)=qo(ny-2,:,:);	% Natural BCs
     
     % 3rd stage
-    dF=FV_WENO5HLL_2d(q,nx,ny,dx,dy,fluxMth);	q=(qo+2*(q-dt*dF))/3;
+    dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=(qo+2*(q-dt*dF))/3;
     
 	q(:,1,:)=qo(:,3,:); q(:, nx ,:)=qo(:,nx-2,:);	% Natural BCs
     q(:,2,:)=qo(:,3,:); q(:,nx-1,:)=qo(:,nx-2,:);	% Natural BCs

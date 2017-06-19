@@ -1,6 +1,6 @@
-function res = FV_WENO5HLL_2d(w,nx,ny,dx,dy,fluxMethod)
+function res = FV_WENO5HLL_2d(w,smax,nx,ny,dx,dy,fluxMethod)
 
-global gamma R
+global gamma
 R=3; I=R:(nx-R); % R: stencil size
 
 %% Right State Extrapolation $u_{i+1/2,j}^{-}$
@@ -70,31 +70,32 @@ res=zeros(size(w)); flux=zeros(size(w));
 for j = I
     for i = I
         % compute flux at i+1/2
-        %flux(:,j,:) = LFflux(qn(:,j-2,:),qp(:,j-2,:),gamma,smax);
         switch fluxMethod
+            case 'LF' % Lax Friedrichs
+                flux(j,i,:) = LFflux(squeeze(qn(j,i-2,:)),squeeze(qp(j,i-2,:)),gamma,[1,0],smax);
             case 'ROE' % Roe
-                flux(j,i,:) = ROEflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
+                flux(j,i,:) = ROEflux(squeeze(qn(j,i-2,:)),squeeze(qp(j,i-2,:)),gamma,[1,0]);
             case 'RUS' % Rusanov
-                flux(j,i,:) = RUSflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
+                flux(j,i,:) = RUSflux(squeeze(qn(j,i-2,:)),squeeze(qp(j,i-2,:)),gamma,[1,0]);
             case 'HLLE' % HLLE
-                flux(j,i,:) = HLLEflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
-            case 'AUSM' % AUSM
-                flux(j,i,:) = AUSMflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
+                flux(j,i,:) = HLLEflux(squeeze(qn(j,i-2,:)),squeeze(qp(j,i-2,:)),gamma,[1,0]);
             case 'HLLC' % HLLC
-                flux(j,i,:) = HLLCflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
+                flux(j,i,:) = HLLCflux(squeeze(qn(j,i-2,:)),squeeze(qp(j,i-2,:)),gamma,[1,0]);
         end
         % Flux contribution to the residual of every cell
         res(j, i ,:) = res(j, i ,:) + flux(j,i,:)/dx;
         res(j,i+1,:) = res(j,i+1,:) - flux(j,i,:)/dx;
     end
 end
+%% 
+J=R:(ny-R); % R: stencil size
 
 %% Right State Extrapolation $u_{i,j+1/2}^{-}$
-vmm = w(I-2,:,:);
-vm  = w(I-1,:,:);
-v   = w( I ,:,:);
-vp  = w(I+1,:,:);
-vpp = w(I+2,:,:);
+vmm = w(J-2,:,:);
+vm  = w(J-1,:,:);
+v   = w( J ,:,:);
+vp  = w(J+1,:,:);
+vpp = w(J+2,:,:);
 
 % Smooth Indicators (Beta factors)
 B0n = 13/12*(vmm-2*vm+v  ).^2 + 1/4*(vmm-4*vm+3*v).^2; 
@@ -116,16 +117,16 @@ w1n = alpha1n./alphasumn;
 w2n = alpha2n./alphasumn;
 
 % Numerical Flux at cell boundary, $u_{i,j+1/2}^{-}$;
-wn  = w0n.*(2*vmm - 7*vm + 11*v)/6 ...
+qn  = w0n.*(2*vmm - 7*vm + 11*v)/6 ...
     + w1n.*( -vm  + 5*v  + 2*vp)/6 ...
     + w2n.*(2*v   + 5*vp - vpp )/6;
 
 %% Left State Extrapolation $u_{i,j+1/2}^{+}$ 
-umm = w(I-1,:,:);
-um  = w( I ,:,:);
-u   = w(I+1,:,:);
-up  = w(I+2,:,:);
-upp = w(I+3,:,:);
+umm = w(J-1,:,:);
+um  = w( J ,:,:);
+u   = w(J+1,:,:);
+up  = w(J+2,:,:);
+upp = w(J+3,:,:);
 
 % Smooth Indicators (Beta factors)
 B0p = 13/12*(umm-2*um+u  ).^2 + 1/4*(umm-4*um+3*u).^2; 
@@ -147,30 +148,30 @@ w1p = alpha1p./alphasump;
 w2p = alpha2p./alphasump;
 
 % Numerical Flux at cell boundary, $u_{i,j+1/2}^{+}$;
-wp  = w0p.*( -umm + 5*um + 2*u  )/6 ...
+qp  = w0p.*( -umm + 5*um + 2*u  )/6 ...
 	+ w1p.*( 2*um + 5*u  - up   )/6 ...
 	+ w2p.*(11*u  - 7*up + 2*upp)/6;
 
 %% Compute finite volume residual term, dg/dy.
-res=zeros(size(w)); flux=zeros(size(w));
-for j = I
+%res=zeros(size(w)); flux=zeros(size(w));
+for j = J
     for i = I
         % compute flux at i+1/2
         switch fluxMethod
             case 'LF' % Lax Friedrichs
-                flux(j,i,:) = LFflux(qn(j,i-2,:),qp(j,i-2,:),gamma,smax);
+                flux(j,i,:) = LFflux(squeeze(qn(j-2,i,:)),squeeze(qp(j-2,i,:)),gamma,[0,1],smax);
             case 'ROE' % Roe
-                flux(j,i,:) = ROEflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
+                flux(j,i,:) = ROEflux(squeeze(qn(j-2,i,:)),squeeze(qp(j-2,i,:)),gamma,[0,1]);
             case 'RUS' % Rusanov
-                flux(j,i,:) = RUSflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
+                flux(j,i,:) = RUSflux(squeeze(qn(j-2,i,:)),squeeze(qp(j-2,i,:)),gamma,[0,1]);
             case 'HLLE' % HLLE
-                flux(j,i,:) = HLLEflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
+                flux(j,i,:) = HLLEflux(squeeze(qn(j-2,i,:)),squeeze(qp(j-2,i,:)),gamma,[0,1]);
             case 'HLLC' % HLLC
-                flux(j,i,:) = HLLCflux(qn(j,i-2,:),qp(j,i-2,:),gamma);
+                flux(j,i,:) = HLLCflux(squeeze(qn(j-2,i,:)),squeeze(qp(j-2,i,:)),gamma,[0,1]);
         end
         % Flux contribution to the residual of every cell
-        res(j, i ,:) = res(j, i ,:) + flux(j,i,:)/dy;
-        res(j,i+1,:) = res(j,i+1,:) - flux(j,i,:)/dy;
+        res( j ,i,:) = res( j ,i,:) + flux(j,i,:)/dy;
+        res(j+1,i,:) = res(j+1,i,:) - flux(j,i,:)/dy;
     end
 end
 
