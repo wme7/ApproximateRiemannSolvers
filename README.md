@@ -6,7 +6,7 @@ Completed 1D solvers list:
 * MUSCL-ROE FV-solver
 * MUSCL-Rusanov (Rus) FV-solver
 * MUSCL-AUSM FV-solver
-* MUSCL-Einfeldt (HLLE) FV-solver
+* MUSCL-Einfeldt HLL (HLLE) FV-solver
 * MUSCL-HLL Contact (HLLC) FV-solver
 * WENO-Lax Friedrichs FD-solver
 * WENO-Rusanov FD-solver
@@ -15,19 +15,16 @@ Completed 1D solvers list:
 * WENO-Rusanov FV-solver
 * WENO-Roe FV-solver
 * WENO-Einfeldt HLL (HLLE) FV-solver
+* WENO-HLL Contact (HLLC) FV-solver
 
 Completed 2D solvers list:
 * MUSCL-Lax Friedrichs FV-solver [by tensor product]
 * MUSCL-Rusanov (Rus) FV-solver [by tensor product]
 * MUSLC-ROE FV-solver [by tensor product]
 * MUSCL-Einfeldt (HLLE) FV-solver [by tensor product]
-
-Uncompleted 1D solvers list*:
-* MUSCL-HLLC FV-solver
-* WENO-HLLC FV-solver
+* MUSCL-HLLC FV-solver [by tensor product]
 
 Uncompleted 2D solvers list*:
-* MUSCL-Rotatted HLLE (RHLLE) FV-solver [by tensor product]
 * MUSCL-Einfeldt (HLLE) FV-solver [true 2D solver]
 
 *I'll come back to finish them later in the future

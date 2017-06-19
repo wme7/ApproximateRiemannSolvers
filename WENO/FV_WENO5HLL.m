@@ -23,11 +23,11 @@ global gamma
 
 %% Parameters
 CFL     = 0.55;	% CFL number
-tFinal	= 0.10;	% Final time
-nx      = 200;  % Number of cells
+tFinal	= 0.20;	% Final time
+nx      = 100;  % Number of cells
 gamma   = 1.4;  % Ratio of specific heats for ideal di-atomic gas
 IC      = 01;	% 10 IC cases are available
-fluxMth ='HLLE';  % ROE, RUS, AUSM, HLLE, HLLC(!).
+fluxMth ='HLLE';  % ROE, RUS, AUSM, HLLE, HLLC.
 plot_fig= 1;
 
 % Discretize spatial domain

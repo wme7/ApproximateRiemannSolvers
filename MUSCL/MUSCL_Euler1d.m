@@ -38,7 +38,7 @@ nx      = 200;  % Number of cells/Elements
 n       = 5;	% Number of degrees of freedom in the gas
 IC      = 01;	% ~12 Initial value problems are available
 limiter ='MC';  % MC, MM, VA.
-fluxMth ='LF'; % LF, ROE, RUS, AUSM, HLLE, HLLC(!), SHLL.
+fluxMth ='LF'; % LF, ROE, RUS, AUSM, HLLE, HLLC, SHLL.
 plot_fig= 1;
 
 % Ratio of specific heats for ideal di-atomic gas

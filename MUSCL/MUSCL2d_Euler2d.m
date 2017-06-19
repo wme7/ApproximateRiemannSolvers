@@ -14,16 +14,15 @@
 %   Refs:
 %   [1] Toro, E. F., "Riemann Solvers and Numerical Methods for Fluid
 %   Dynamics" Springer-Verlag, Second Edition, 1999. 
-%   [2] Masatsuka, K. "I do like CFD." Published by Katate Masatsuka 2009.
-%   [3] Balsara, Dinshaw S. "A two-dimensional HLLC Riemann solver for
+%   [2] Balsara, Dinshaw S. "A two-dimensional HLLC Riemann solver for
 %   conservation laws: Application to Euler and magnetohydrodynamic flows."
 %   Journal of Computational Physics 231.22 (2012): 7476-7503. 
-%   [4] Einfeldt, Bernd. "On Godunov-type methods for gas dynamics." SIAM
+%   [3] Einfeldt, Bernd. "On Godunov-type methods for gas dynamics." SIAM
 %   Journal on Numerical Analysis 25.2 (1988): 294-318. 
-%   [5] Kurganov, Alexander, and Eitan Tadmor. "Solution of two?dimensional
+%   [4] Kurganov, Alexander, and Eitan Tadmor. "Solution of two?dimensional
 %   Riemann problems for gas dynamics without Riemann problem solvers."
 %   Numerical Methods for Partial Differential Equations 18.5 (2002): 584-608. 
-%   [6] Vides, Jeaniffer, Boniface Nkonga, and Edouard Audit. "A simple
+%   [5] Vides, Jeaniffer, Boniface Nkonga, and Edouard Audit. "A simple
 %   two-dimensional extension of the HLL Riemann solver for gas dynamics."
 %   (2014). 
 %

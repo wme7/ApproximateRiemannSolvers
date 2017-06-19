@@ -353,9 +353,9 @@ function HLLE = HLLEflux(qL,qR,gamma)
     FR=[rR.*uR; rR.*uR.^2+pR; uR.*(rR.*ER+pR)];
     
     % Compute the HLL flux.
-    if SLm >= 0  % Right-going supersonic flow
+    if (0 <= SLm)  % Right-going supersonic flow
         HLLE = FL;
-    elseif (SLm <= 0) && (SRp >= 0) % Subsonic flow
+    elseif (SLm <= 0) && (0 <= SRp) % Subsonic flow
         select = 1;
         switch select
             case 1 % True HLLE function
@@ -364,179 +364,78 @@ function HLLE = HLLEflux(qL,qR,gamma)
                 smax = max(abs(SLm),abs(SRp)); 
                 HLLE = ( FR + FL + smax*(qL-qR) )/2; % Rusanov flux%
         end
-    elseif  SRp <= 0 % Left-going supersonic flow
+    elseif  (0 >= SRp) % Left-going supersonic flow
         HLLE = FR;
     end
 end
 
-% function HLLC = HLLCflux(qL,qR,gamma)
-%     % Compute HLLC flux (Not finished!)
-% 
-%     % Left state
-%     rL = qL(1);
-%     uL = qL(2)./rL;
-%     EL = qL(3)./rL;
-%     pL = (gamma-1)*( qL(3) - rL*uL*uL/2 );
-%     aL = sqrt(gamma*pL/rL);
-%     %HL = ( qL(3) + pL )./ rL;
-%     
-%     % Right state
-%     rR = qR(1);
-%     uR = qR(2)./rR;
-%     ER = qR(3)./rR;
-%     pR = (gamma-1)*( qR(3) - rR*uR*uR/2 );
-%     aR = sqrt(gamma*pR/rR);
-%     %HR = ( qR(3) + pR )./ rR;
-% 
-%     % Compute guess pressure from PVRS Riemann solver
-%     CUP  = 0.25*(rL + rR)*(aL + aR);
-%     PPV  = max( 0 ,0.5*(pL + pR) + 0.5*(uL - uR)*CUP);
-%     pmin = min(pL,pR);
-%     pmax = max(pL,pR);
-%     Qmax = pmax/pmin;
-%     Quser= 2.0; % <--- parameter manually set! I don't like this :/
-%     
-%      if (Qmax <= Quser) && (pmin <= PPV) && (PPV <= pmax)
-%      % Select PRVS Riemann solver
-%          pM = PPV;
-%          uM = 0.5*(uL + uR) + 0.5*(pL - pR)/CUP;
-%       else
-%          if PPV < pmin
-%          % Select Two-Rarefaction Riemann solver
-%             PQ  = (pL/pR)^(gamma - 1.0)/(2.0*gamma);
-%             uM  = (PQ*uL/aL + uR/aR + 2/(gamma-1)*(PQ - 1.0))/(PQ/aL + 1.0/aR);
-%             PTL = 1 + (gamma-1)/2.0*(uL - uM)/aL;
-%             PTR = 1 + (gamma-1)/2.0*(uM - uR)/aR;
-%             pM  = 0.5*(pL*PTL^(2*gamma/(gamma-1)) + pR*PTR^(2*gamma/(gamma-1)));
-%          else 
-%          % Use Two-Shock Riemann solver with PVRS as estimate
-%             GEL = sqrt((2/(gamma+1)/rL)/((gamma-1)/(gamma+1)*pL + PPV));
-%             GER = sqrt((2/(gamma+1)/rR)/((gamma-1)/(gamma+1)*pR + PPV));
-%             pM  = (GEL*pL + GER*pR - (uR - uL))/(GEL + GER);
-%             uM  = 0.5*(uL + uR) + 0.5*(GER*(pM - pR) - GEL*(pM - pL));
-%          end
-%       end
-% 
-%     % Estimate wave speeds: SL, SM and SR
-% 	if pM<=pL; SL=uL-aL; else SL=uL-aL*sqrt(1+(gamma+1)/(2*gamma)*(pM/pL - 1)); end 
-%     SM = uM;
-% 	if pM<=pR; SR=uR+aR; else SR=uR+aR*sqrt(1+(gamma+1)/(2*gamma)*(pM/pR - 1)); end
-% 
-%     % Left and Right fluxes
-%     FL=[rL.*uL; rL.*uL.^2+pL; uL.*(rL.*EL+pL)];
-%     FR=[rR.*uR; rR.*uR.^2+pR; uR.*(rR.*ER+pR)];
-%     
-%     % Compute the HLL flux.
-%     if SL >= 0  % Right-going supersonic flow
-%         HLLC = FL;
-%     elseif (SL <= 0) && (SR >= 0) % Subsonic flow
-%         if SM > 0       % Subsonic flow to the right
-%             ENEL = qL(3)/rL  + (SM - uL)*(SM + pL/(rL*(SL - uL)));
-%             qsL(1,1) = rL*(SL - uL)/(SL - SM);
-%             qsL(2,1) = qsL(1)*SM;
-%             qsL(3,1) = qsL(1)*ENEL;
-%             %HLLC = ( SR*FL - SL*FR + SL*SR*(qR-qL) )/(SR-SL);
-%             HLLC = FL + SL*(qsL - qL);
-%         else % SM <0    % Subsonic flow to the Left
-%             ENER = qR(3)/rR + (SM - uR)*(SM + pR/(rR*(SR - uR)));
-%             qsR(1,1) = rR*(SR - uR)/(SR - SM);
-%             qsR(2,1) = qsR(1)*SM;
-%             qsR(3,1) = qsR(1)*ENER;
-%             %HLLC = ( SR*FL - SL*FR + SL*SR*(qR-qL) )/(SR-SL);
-%             HLLC = FR + SR*(qsR - qR);
-%         end
-%     elseif  SR <= 0 % Left-going supersonic flow
-%         HLLC = FR;
-%     end
-% end
-
 function HLLC = HLLCflux(qL,qR,gamma)
+    % Compute HLLC flux
 
     % Left state
     rL = qL(1);
     uL = qL(2)./rL;
     EL = qL(3)./rL;
-    pL = (gamma-1)*( EL - 0.5*rL*uL*uL );
-    HL = ( EL + pL )./ rL;
+    pL = (gamma-1)*( qL(3) - rL*uL*uL/2 );
     aL = sqrt(gamma*pL/rL);
     
     % Right state
     rR = qR(1);
     uR = qR(2)./rR;
     ER = qR(3)./rR;
-    pR = (gamma-1)*( ER - 0.5*rR*uR*uR );
-    HR = ( ER + pR )./ rR;
+    pR = (gamma-1)*( qR(3) - rR*uR*uR/2 );
     aR = sqrt(gamma*pR/rR);
     
-    % Evaluate the two wave speeds: Einfeldt.
-    RT = sqrt(rR/rL);
-    u = (uL+RT*uR)/(1+RT);
-    H = (HL+RT*HR)/(1+RT);
-    a = sqrt( (gamma-1)*(H-0.5*u*u) );
+    % Left and Right fluxes
+    FL=[rL.*uL; rL.*uL.^2+pL; uL.*(rL.*EL+pL)];
+    FR=[rR.*uR; rR.*uR.^2+pR; uR.*(rR.*ER+pR)];
+
+    % Compute guess pressure from PVRS Riemann solver
+    PPV  = max(0 , 0.5*(pL+pR) + 0.5*(uL-uR) * (0.25*(rL+rR)*(aL+aR)));
+    pmin = min(pL,pR);
+    pmax = max(pL,pR);
+    Qmax = pmax/pmin;
+    Quser= 2.0; % <--- parameter manually set (I don't like this!)
     
-    % contravariant velocity
-    Aq=Au*as+Av*bs;
+     if (Qmax <= Quser) && (pmin <= PPV) && (PPV <= pmax)
+     % Select PRVS Riemann solver
+         pM = PPV;
+         %uM = 0.5*(uL + uR) + 0.5*(pL - pR)/CUP;
+      else
+         if PPV < pmin
+         % Select Two-Rarefaction Riemann solver
+            PQ  = (pL/pR)^(gamma - 1.0)/(2.0*gamma);
+            uM  = (PQ*uL/aL + uR/aR + 2/(gamma-1)*(PQ-1.0))/(PQ/aL+1.0/aR);
+            PTL = 1 + (gamma-1)/2.0*(uL - uM)/aL;
+            PTR = 1 + (gamma-1)/2.0*(uM - uR)/aR;
+            pM  = 0.5*(pL*PTL^(2*gamma/(gamma-1)) + pR*PTR^(2*gamma/(gamma-1)));
+         else 
+         % Use Two-Shock Riemann solver with PVRS as estimate
+            GEL = sqrt((2/(gamma+1)/rL)/((gamma-1)/(gamma+1)*pL + PPV));
+            GER = sqrt((2/(gamma+1)/rR)/((gamma-1)/(gamma+1)*pR + PPV));
+            pM  = (GEL*pL + GER*pR - (uR - uL))/(GEL + GER);
+            %uM  = 0.5*(uL + uR) + 0.5*(GER*(pM - pR) - GEL*(pM - pL));
+         end
+      end
 
-  	% left and right state wave speed
-	sL=min(qL-aL,Aq-Aa);
-	sR=max(qR+aR,Aq+Aa);
-
-	% middle state wave speed & pressure
-    g1=dR*qR*(sR-qR)-dL*qL*(sL-qL)+pL-pR;
-    g2=dR*(sR-qR)-dL*(sL-qL);
-	sM=g1/g2;
-    pM=dL*(qL-sL)*(qL-sM)+pL;
+    % Estimate wave speeds: SL, SR and SM (Toro, 1994)
+    if pM>pL; zL=sqrt(1+(gamma+1)/(2*gamma)*(pM/pL-1)); else zL=1; end    
+    if pM>pR; zR=sqrt(1+(gamma+1)/(2*gamma)*(pM/pR-1)); else zR=1; end
+  
+	SL = uL - aL*zL;
+    SR = uR + aR*zR;
+    SM = (pL-pR + rR*uR*(SR-uR) - rL*uL*(SL-uL))/(rR*(SR-uR) - rL*(SL-uL));
     
-    % Interface flux
-    if (sL>=0.0) % left state
-        %F=FL
-        HLLC(0) = Lab*(wL(0)*qL);
-        HLLC(1) = Lab*(wL(1)*qL + pL*as);
-        HLLC(2) = Lab*(wL(2)*qL + pL*bs);
-        HLLC(3) = Lab*(wL(3)*qL + pL*qL);
-
-        ddt = Lab*(fabs(qL)+aL);
-    elseif (sL<0.0) && (0.0<=sM) % middle left
-        %F=FL_star
-        f1=sL-qL;
-        f2=sL-sM;
-        f3=f1/f2;
-
-        wLM(0)= wL(0)*f3;
-        wLM(1)= wL(1)*f3 + (pM-pL)*as/f2;
-        wLM(2)= wL(2)*f3 + (pM-pL)*bs/f2;
-        wLM(3)= wL(3)*f3 + (-pL*qL+pM*sM)/f2;
-
-        HLLC(0) =  Lab*(wLM(0)*sM);
-        HLLC(1) =  Lab*(wLM(1)*sM + pM*as);
-        HLLC(2) =  Lab*(wLM(2)*sM + pM*bs);
-        HLLC(3) =  Lab*(wLM(3)*sM + pM*sM);
-
-        ddt = Lab*(fabs(sM)+Aa);
-    elseif (sM<0.0) && (0.0<sR) % middle right
-        %F=FR_star
-        f1=sR-qR;
-        f2=sR-sM;
-        f3=f1/f2;
-
-        wRM(0)= wR(0)*f3;
-        wRM(1)= wR(1)*f3 + (pM-pR)*as/f2;
-        wRM(2)= wR(2)*f3 + (pM-pR)*bs/f2;
-        wRM(3)= wR(3)*f3 + (-pR*qR+pM*sM)/f2;
-
-        HLLC(0) = Lab*(wRM(0)*sM);
-        HLLC(1) = Lab*(wRM(1)*sM + pM*as);
-        HLLC(2) = Lab*(wRM(2)*sM + pM*bs);
-        HLLC(3) = Lab*(wRM(3)*sM + pM*sM);
-
-        ddt = Lab*(fabs(sM)+Aa);
-    elseif (sR<=0.0) % right state
-        %F=FR
-        HLLC(0) = Lab*(wR(0)*qR);
-        HLLC(1) = Lab*(wR(1)*qR + pR*as);
-        HLLC(2) = Lab*(wR(2)*qR + pR*bs);
-        HLLC(3) = Lab*(wR(3)*qR + pR*qR);
-
-        ddt = Lab*(fabs(qR)+aR);
+    % Compute the HLL flux.
+    if 0 <= SL  % Right-going supersonic flow
+        HLLC = FL;
+    elseif (SL <= 0) && (0 <= SM)	% Subsonic flow to the right
+        qsL = rL*(SL-uL)/(SL-SM)*[1; SM; qL(3)/rL + (SM-uL)*(SM+pL/(rL*(SL-uL)))];
+        HLLC = FL + SL*(qsL - qL);
+    elseif (SM <= 0) && (0 <= SR)	% Subsonic flow to the Left
+        qsR = rR*(SR-uR)/(SR-SM)*[1; SM; qR(3)/rR + (SM-uR)*(SM+pR/(rR*(SR-uR)))];
+        HLLC = FR + SR*(qsR - qR);
+    elseif  0 >= SR % Left-going supersonic flow
+        HLLC = FR;
     end
 end

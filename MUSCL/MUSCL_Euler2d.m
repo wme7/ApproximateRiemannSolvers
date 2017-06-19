@@ -23,9 +23,6 @@
 %   [5] Kurganov, Alexander, and Eitan Tadmor. "Solution of two?dimensional
 %   Riemann problems for gas dynamics without Riemann problem solvers."
 %   Numerical Methods for Partial Differential Equations 18.5 (2002): 584-608. 
-%   [6] Vides, Jeaniffer, Boniface Nkonga, and Edouard Audit. "A simple
-%   two-dimensional extension of the HLL Riemann solver for gas dynamics."
-%   (2014). 
 %
 % coded by Manuel Diaz, 2015.05.10
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -35,12 +32,12 @@
 %% Parameters
 CFL     = 0.50;     % CFL number
 tEnd    = 0.25;     % Final time
-nx      = 400;      % Number of cells/Elements in x
-ny      = 400;      % Number of cells/Elements in y
+nx      = 100;      % Number of cells/Elements in x
+ny      = 100;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
 limiter ='MC';      % MM, MC, VA.
-fluxMth ='HLLE';	% LF, RUS, ROE, HLLE, RHLLE(!).
+fluxMth ='HLLE';	% LF, RUS, ROE, HLLE, HLLC.
 plot_fig= 1;        % 1:visualize evolution 
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -141,4 +138,4 @@ s3=subplot(2,3,3); contour(x,y,p,n); axis('square'); xlabel('x(m)'); ylabel('Pre
 s4=subplot(2,3,4); contour(x,y,ss,n);axis('square'); xlabel('x(m)'); ylabel('Entropy/R gas');
 s5=subplot(2,3,5); contour(x,y,M,n); axis('square'); xlabel('x(m)'); ylabel('Mach number');
 s6=subplot(2,3,6); contour(x,y,e,n); axis('square'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,'MUSCL Euler 2-D Solver');
+title(s1,['MUSCL Euler ',fluxMth,' 2-D solver']);
