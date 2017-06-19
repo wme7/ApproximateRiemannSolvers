@@ -36,7 +36,7 @@ tEnd    = 0.15;	% Final time
 nx      = 200;  % Number of cells/Elements
 n       = 5;	% Number of degrees of freedom in the gas
 IC      = 01;	% ~12 Initial value problems are available
-limiter ='MC';  % MC, MM, VA.
+limiter ='VA';  % MC, MM, VA.
 fluxMth ='HLLC'; % LF, ROE, RUS, AUSM, HLLE, HLLC.
 plot_fig= 1;
 
