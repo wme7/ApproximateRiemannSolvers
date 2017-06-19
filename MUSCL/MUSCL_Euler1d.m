@@ -25,7 +25,6 @@
 %   Refs:
 %   [1] Toro, E. F., "Riemann Solvers and Numerical Methods for Fluid
 %   Dynamics" Springer-Verlag, Second Edition, 1999. 
-%   [2] Masatsuka, K. "I do like CFD." Published by Katate Masatsuka 2009. 
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -38,7 +37,7 @@ nx      = 200;  % Number of cells/Elements
 n       = 5;	% Number of degrees of freedom in the gas
 IC      = 01;	% ~12 Initial value problems are available
 limiter ='MC';  % MC, MM, VA.
-fluxMth ='LF'; % LF, ROE, RUS, AUSM, HLLE, HLLC, SHLL.
+fluxMth ='HLLC'; % LF, ROE, RUS, AUSM, HLLE, HLLC.
 plot_fig= 1;
 
 % Ratio of specific heats for ideal di-atomic gas

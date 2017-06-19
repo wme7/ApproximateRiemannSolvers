@@ -1,15 +1,15 @@
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%               basic MUSCL solver for Euler system equations
+%               basic WENO solver for Euler system equations
 %                      by Manuel Diaz, NTU, 29.04.2015
 %
 %                         U_t + F(U)_x + G(U)_y = 0,
 %
-% MUSCL based numerical schemes extend the idea of using a linear
-% piecewise approximation to each cell by using slope limited left and
-% right extrapolated states. This results in the following high
-% resolution, TVD discretisation scheme.   
-%
+%           coded by Manuel A. Diaz, manuel.ade'at'gmail.com 
+%            Institute of Applied Mechanics, NTU, 2012.12.27
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% coded by Manuel A. Diaz, 2012.12.27. Last modif: 29.04.2016.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   Refs:
 %   [1] Toro, E. F., "Riemann Solvers and Numerical Methods for Fluid
@@ -23,9 +23,8 @@
 %   Riemann problems for gas dynamics without Riemann problem solvers."
 %   Numerical Methods for Partial Differential Equations 18.5 (2002): 584-608. 
 %
-% coded by Manuel Diaz, 2015.05.10
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+global gamma
 %clear; close all; clc;
 
 %% Parameters
@@ -35,8 +34,7 @@ nx      = 100;      % Number of cells/Elements in x
 ny      = 100;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
-limiter ='MC';      % MM, MC, VA.
-fluxMth ='HLLC';	% LF, RUS, ROE, HLLE, HLLC.
+fluxMth ='HLLE';	% LF, RUS, ROE, HLLE, HLLC.
 plot_fig= 1;        % 1:visualize evolution 
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -75,18 +73,32 @@ q=q0; t=dt0; it=0; dt=dt0; a=a0;
 % Solver Loop
 tic
 while t < tEnd
+    % RK Initial step
+    qo = q;
     
-    % RK2 1st step
-    qs = q - dt*MUSCL_EulerRes2d(q,a,gamma,dx,dy,nx,ny,limiter,fluxMth);
+    % 1st stage
+    dF=FV_WENO5HLL_2d(q,nx,ny,dx,dy,fluxMth);	q=qo-dt*dF;
+   
+    q(:,1,:)=qo(:,3,:); q(:, nx ,:)=qo(:,nx-2,:);	% Natural BCs
+    q(:,2,:)=qo(:,3,:); q(:,nx-1,:)=qo(:,nx-2,:);	% Natural BCs
+    q(1,:,:)=qo(3,:,:); q( ny ,:,:)=qo(ny-2,:,:);	% Natural BCs
+    q(2,:,:)=qo(3,:,:); q(ny-1,:,:)=qo(ny-2,:,:);	% Natural BCs
     
-    qs(:,1,:)=qs(:,2,:); qs(:,nx,:)=qs(:,nx-1,:);   % Natural BCs
-    qs(1,:,:)=qs(2,:,:); qs(ny,:,:)=qs(ny-1,:,:);   % Natural BCs
+    % 2nd Stage
+    dF=FV_WENO5HLL_2d(q,nx,ny,dx,dy,fluxMth);	q=0.75*qo+0.25*(q-dt*dF);
     
-    % RK2 2nd step / update q
-    q = (q + qs - dt*MUSCL_EulerRes2d(qs,a,gamma,dx,dy,nx,ny,limiter,fluxMth))/2;
+	q(:,1,:)=qo(:,3,:); q(:, nx ,:)=qo(:,nx-2,:);	% Natural BCs
+    q(:,2,:)=qo(:,3,:); q(:,nx-1,:)=qo(:,nx-2,:);	% Natural BCs
+    q(1,:,:)=qo(3,:,:); q( ny ,:,:)=qo(ny-2,:,:);	% Natural BCs
+    q(2,:,:)=qo(3,:,:); q(ny-1,:,:)=qo(ny-2,:,:);	% Natural BCs
     
-    q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
-    q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
+    % 3rd stage
+    dF=FV_WENO5HLL_2d(q,nx,ny,dx,dy,fluxMth);	q=(qo+2*(q-dt*dF))/3;
+    
+	q(:,1,:)=qo(:,3,:); q(:, nx ,:)=qo(:,nx-2,:);	% Natural BCs
+    q(:,2,:)=qo(:,3,:); q(:,nx-1,:)=qo(:,nx-2,:);	% Natural BCs
+    q(1,:,:)=qo(3,:,:); q( ny ,:,:)=qo(ny-2,:,:);	% Natural BCs
+    q(2,:,:)=qo(3,:,:); q(ny-1,:,:)=qo(ny-2,:,:);	% Natural BCs
     
 	% compute flow properties
     r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r;
