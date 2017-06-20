@@ -232,17 +232,17 @@ end
 for i = I
     switch fluxMethod
         case 'LF' % Lax Friedrichs
-            flux(nx-2,i,:) = LFflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1],smax);
+            flux(ny-2,i,:) = LFflux(squeeze(qn(ny-1-2*R,i,:)),squeeze(qp(ny-1-2*R,i,:)),gamma,[0,1],smax);
         case 'ROE' % Roe
-            flux(nx-2,i,:) = ROEflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1]);
+            flux(ny-2,i,:) = ROEflux(squeeze(qn(ny-1-2*R,i,:)),squeeze(qp(ny-1-2*R,i,:)),gamma,[0,1]);
         case 'RUS' % Rusanov
-            flux(nx-2,i,:) = RUSflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1]);
+            flux(ny-2,i,:) = RUSflux(squeeze(qn(ny-1-2*R,i,:)),squeeze(qp(ny-1-2*R,i,:)),gamma,[0,1]);
         case 'HLLE' % HLLE
-            flux(nx-2,i,:) = HLLEflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1]);
+            flux(ny-2,i,:) = HLLEflux(squeeze(qn(ny-1-2*R,i,:)),squeeze(qp(ny-1-2*R,i,:)),gamma,[0,1]);
         case 'HLLC' % HLLC
-            flux(nx-2,i,:) = HLLCflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1]);
+            flux(ny-2,i,:) = HLLCflux(squeeze(qn(ny-1-2*R,i,:)),squeeze(qp(ny-1-2*R,i,:)),gamma,[0,1]);
     end
-    res(nx-2,i,:) = res(nx-2,i,:) + flux(nx-2,i,:)/dy;
+    res(ny-2,i,:) = res(ny-2,i,:) + flux(ny-2,i,:)/dy;
 end
 
 end % FVM WENO

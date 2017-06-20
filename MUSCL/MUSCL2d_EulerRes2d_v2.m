@@ -1,4 +1,4 @@
-function [res] = MUSCL2d_EulerSys2d_v2(q,gamma,dt,dx,dy,N,M,limiter,assembly)
+function [res] = MUSCL2d_EulerRes2d_v2(q,gamma,dt,dx,dy,N,M,limiter,assembly)
 %   A genuine 2d HLLE Riemnan solver for Euler Equations.
 %   Following details in ref [1].:
 %

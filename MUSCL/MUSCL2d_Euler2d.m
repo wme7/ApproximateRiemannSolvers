@@ -19,7 +19,7 @@
 %   Journal of Computational Physics 231.22 (2012): 7476-7503. 
 %   [3] Einfeldt, Bernd. "On Godunov-type methods for gas dynamics." SIAM
 %   Journal on Numerical Analysis 25.2 (1988): 294-318. 
-%   [4] Kurganov, Alexander, and Eitan Tadmor. "Solution of two?dimensional
+%   [4] Kurganov, Alexander, and Eitan Tadmor. "Solution of two-dimensional
 %   Riemann problems for gas dynamics without Riemann problem solvers."
 %   Numerical Methods for Partial Differential Equations 18.5 (2002): 584-608. 
 %   [5] Vides, Jeaniffer, Boniface Nkonga, and Edouard Audit. "A simple
