@@ -23,6 +23,11 @@ Completed 2D solvers list:
 * MUSLC-ROE FV-solver [by tensor product]
 * MUSCL-Einfeldt (HLLE) FV-solver [by tensor product]
 * MUSCL-HLLC FV-solver [by tensor product]
+* WENO-Lax Friedrichs FV-solver [by tensor product]
+* WENO-Rusanov (Rus) FV-solver [by tensor product]
+* WENO-ROE FV-solver [by tensor product]
+* WENO-Einfeldt (HLLE) FV-solver [by tensor product]
+* WENO-HLLC FV-solver [by tensor product]
 
 Uncompleted 2D solvers list*:
 * MUSCL-Einfeldt (HLLE) FV-solver [true 2D solver]

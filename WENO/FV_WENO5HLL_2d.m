@@ -1,7 +1,9 @@
 function res = FV_WENO5HLL_2d(w,smax,nx,ny,dx,dy,fluxMethod)
 
 global gamma
-R=3; I=R:(nx-R); % R: stencil size
+R=3; 
+I=R:(nx-R); % R: stencil size
+J=R:(ny-R); % R: stencil size
 
 %% Right State Extrapolation $u_{i+1/2,j}^{-}$
 vmm = w(:,I-2,:);
@@ -67,9 +69,9 @@ qp  = w0p.*( -umm + 5*um + 2*u  )/6 ...
 
 %% Compute finite volume residual term, df/dx.
 res=zeros(size(w)); flux=zeros(size(w));
-for j = I
+for j = J
     for i = I
-        % compute flux at i+1/2
+        % compute flux at (i+1/2,j)
         switch fluxMethod
             case 'LF' % Lax Friedrichs
                 flux(j,i,:) = LFflux(squeeze(qn(j,i-2,:)),squeeze(qp(j,i-2,:)),gamma,[1,0],smax);
@@ -87,8 +89,41 @@ for j = I
         res(j,i+1,:) = res(j,i+1,:) - flux(j,i,:)/dx;
     end
 end
-%% 
-J=R:(ny-R); % R: stencil size
+
+% Flux contribution of the MOST WEST FACE: left face of cell j=3.
+for j = J
+    switch fluxMethod
+        case 'LF' % Lax Friedrichs
+            flux(j,3,:) = LFflux(squeeze(qn(j,R,:)),squeeze(qp(j,R,:)),gamma,[1,0],smax);
+        case 'ROE' % Roe
+            flux(j,3,:) = ROEflux(squeeze(qn(j,R,:)),squeeze(qp(j,R,:)),gamma,[1,0]);
+        case 'RUS' % Rusanov
+            flux(j,3,:) = RUSflux(squeeze(qn(j,R,:)),squeeze(qp(j,R,:)),gamma,[1,0]);
+        case 'HLLE' % HLLE
+            flux(j,3,:) = HLLEflux(squeeze(qn(j,R,:)),squeeze(qp(j,R,:)),gamma,[1,0]);
+        case 'HLLC' % HLLC
+            flux(j,3,:) = HLLCflux(squeeze(qn(j,R,:)),squeeze(qp(j,R,:)),gamma,[1,0]);
+    end
+    res(j,3,:) = res(j,3,:) - flux(j,3,:)/dx;
+end
+
+ 
+% Flux contribution of the MOST EAST FACE: right face of cell j=nx-2.
+for j = J
+    switch fluxMethod
+        case 'LF' % Lax Friedrichs
+            flux(j,nx-2,:) = LFflux(squeeze(qn(j,nx-1-2*R,:)),squeeze(qp(j,nx-1-2*R,:)),gamma,[1,0],smax);
+        case 'ROE' % Roe
+            flux(j,nx-2,:) = ROEflux(squeeze(qn(j,nx-1-2*R,:)),squeeze(qp(j,nx-1-2*R,:)),gamma,[1,0]);
+        case 'RUS' % Rusanov
+            flux(j,nx-2,:) = RUSflux(squeeze(qn(j,nx-1-2*R,:)),squeeze(qp(j,nx-1-2*R,:)),gamma,[1,0]);
+        case 'HLLE' % HLLE
+            flux(j,nx-2,:) = HLLEflux(squeeze(qn(j,nx-1-2*R,:)),squeeze(qp(j,nx-1-2*R,:)),gamma,[1,0]);
+        case 'HLLC' % HLLC
+            flux(j,nx-2,:) = HLLCflux(squeeze(qn(j,nx-1-2*R,:)),squeeze(qp(j,nx-1-2*R,:)),gamma,[1,0]);
+    end
+    res(j,nx-2,:) = res(j,nx-2,:) + flux(j,nx-2,:)/dx;
+end
 
 %% Right State Extrapolation $u_{i,j+1/2}^{-}$
 vmm = w(J-2,:,:);
@@ -156,7 +191,7 @@ qp  = w0p.*( -umm + 5*um + 2*u  )/6 ...
 %res=zeros(size(w)); flux=zeros(size(w));
 for j = J
     for i = I
-        % compute flux at i+1/2
+        % compute flux at (i,j+1/2)
         switch fluxMethod
             case 'LF' % Lax Friedrichs
                 flux(j,i,:) = LFflux(squeeze(qn(j-2,i,:)),squeeze(qp(j-2,i,:)),gamma,[0,1],smax);
@@ -173,6 +208,41 @@ for j = J
         res( j ,i,:) = res( j ,i,:) + flux(j,i,:)/dy;
         res(j+1,i,:) = res(j+1,i,:) - flux(j,i,:)/dy;
     end
+end
+
+% Flux contribution of the MOST SOUTH FACE: left face of cell i=3.
+for i = I
+    switch fluxMethod
+        case 'LF' % Lax Friedrichs
+            flux(3,i,:) = LFflux(squeeze(qn(R,i,:)),squeeze(qp(R,i,:)),gamma,[0,1],smax);
+        case 'ROE' % Roe
+            flux(3,i,:) = ROEflux(squeeze(qn(R,i,:)),squeeze(qp(R,i,:)),gamma,[0,1]);
+        case 'RUS' % Rusanov
+            flux(3,i,:) = RUSflux(squeeze(qn(R,i,:)),squeeze(qp(R,i,:)),gamma,[0,1]);
+        case 'HLLE' % HLLE
+            flux(3,i,:) = HLLEflux(squeeze(qn(R,i,:)),squeeze(qp(R,i,:)),gamma,[0,1]);
+        case 'HLLC' % HLLC
+            flux(3,i,:) = HLLCflux(squeeze(qn(R,i,:)),squeeze(qp(R,i,:)),gamma,[0,1]);
+    end
+    res(3,i,:) = res(3,i,:) - flux(3,i,:)/dy;
+end
+
+ 
+% Flux contribution of the MOST NORTH FACE: right face of cell i=ny-2.
+for i = I
+    switch fluxMethod
+        case 'LF' % Lax Friedrichs
+            flux(nx-2,i,:) = LFflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1],smax);
+        case 'ROE' % Roe
+            flux(nx-2,i,:) = ROEflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1]);
+        case 'RUS' % Rusanov
+            flux(nx-2,i,:) = RUSflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1]);
+        case 'HLLE' % HLLE
+            flux(nx-2,i,:) = HLLEflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1]);
+        case 'HLLC' % HLLC
+            flux(nx-2,i,:) = HLLCflux(squeeze(qn(nx-1-2*R,i,:)),squeeze(qp(nx-1-2*R,i,:)),gamma,[0,1]);
+    end
+    res(nx-2,i,:) = res(nx-2,i,:) + flux(nx-2,i,:)/dy;
 end
 
 end % FVM WENO

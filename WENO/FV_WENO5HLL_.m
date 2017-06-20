@@ -1,6 +1,6 @@
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%               basic WENO solver for Euler system equations
+%             basic 2-D WENO solver for Euler system equations
 %                      by Manuel Diaz, NTU, 29.04.2015
 %
 %                         U_t + F(U)_x + G(U)_y = 0,
