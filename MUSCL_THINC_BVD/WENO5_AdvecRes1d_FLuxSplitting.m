@@ -1,4 +1,4 @@
-function res = WENO5_AdvecRes1d_FLuxSplitting(w,flux,dflux,S,dx)
+function res = WENO5_AdvecRes1d_FluxSplitting(w,flux,dflux,S,dx)
 % *************************************************************************
 % Input: u(i) = [u(i-2) u(i-1) u(i) u(i+1) u(i+2)];
 % Output: res = df/dx;
