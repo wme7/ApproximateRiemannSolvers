@@ -35,7 +35,7 @@
 % -------
 % The present implementation serves for the purpose of comparions and a
 % summary of the main hybrid algorithms reported in [1-3]. In this
-% snipets, I prioritize readability rather than code speed. 
+% snippets, I prioritize readability rather than code performance. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear; %close all; clc;
@@ -45,7 +45,7 @@ clear; %close all; clc;
   CFL = 0.50;	% Courant Number
  tEnd = 2.00;   % End time
 limit = 'MM';   % MC, MM, VA. (only for Methd = {5,6})
-Methd = 4;      % 1:WENO5, 2:WENOZ-THINC-BVDv2, 3:WENOZ-THINC-BVDv4, 
+Methd = 2;      % 1:WENO5, 2:WENO5-THINC-BVDv2, 3:WENO5-THINC-BVDv4, 
                 % 4:THINC, 5:MUSCL-THINC-BVDv2, 6:MUSCL-THINC-BVDv4.             
 % NOTE:
 %  XMETHOD-THINC-BVDv1 (algorithm 1) is similar to algorithm 4 and
