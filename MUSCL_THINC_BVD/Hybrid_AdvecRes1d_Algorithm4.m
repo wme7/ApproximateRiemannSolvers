@@ -74,9 +74,9 @@ qimh_W = w0p.*p0p + w1p.*p1p + w2p.*p2p;
 % Compute total boundary variations TBV for each cell
 TBV_W = abs(circshift(qiph_W,+1)-qimh_W)+abs(qiph_W-circshift(qimh_W,-1));
 
-%% THINC reconstruction
+%% 3. THINC reconstruction
 % Constants parameters
-Beta=2.0; epsilon = 1E-20;
+Beta=1.6; epsilon = 1E-20;
 
 % Initial Arrays      
 % qi = q;  % : q_{ j }^{n},
@@ -98,7 +98,7 @@ qimh_T = qmin + 0.5*qmax.*(1+theta.*A);
 % Compute total boundary variations TBV for each cell
 TBV_T = abs(circshift(qiph_T,+1)-qimh_T)+abs(qiph_T-circshift(qimh_T,-1));
 
-%% 3. BVD Algorithm
+%% 4. BVD Algorithm
 condition = TBV_T < TBV_W;
 qiph_W(condition)=qiph_T(condition); qL=circshift(qiph_W,0);
 qimh_W(condition)=qimh_T(condition); qR=circshift(qimh_W,-1);

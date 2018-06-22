@@ -14,7 +14,7 @@ qip1 = circshift(qi,-1); % : q_{j+1}^{n}.
 % Constnat Coefs
 qmin = min(cat(3,qim1,qip1),[],3);
 qmax = max(cat(3,qim1,qip1),[],3)-qmin;
-theta= sign(qip1-qim1);
+theta= sign(qip1-qim1); %theta(theta==0)=1;
 C = (qi-qmin+epsilon)./(qmax+epsilon);
 
 %% Smooth reconstructions

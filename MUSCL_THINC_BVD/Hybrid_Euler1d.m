@@ -48,15 +48,15 @@ clear; %close all; clc;
 global gamma
 
 %% Parameters
-CFL     = 0.05;	% CFL number
-tFinal	= 0.15;	% Final time
-nE      = 200;  % Number of cells/Elements
+CFL     = 0.65;	% CFL number
+tFinal	= 0.25;	% Final time
+nE      = 100;  % Number of cells/Elements
 n       = 5;	% Number of degrees of freedom in the gas
 IC      = 01;	% 10 IC cases are available
 method  = 2;    % 1:MUSCL, 2:MUSCL-THINC-BVD
 limiter ='MM';  % MC, MM, VA.
-fluxMth ='ROE'; % LF, ROE, RUS, AUSM, HLLE, HLLC.
-plot_fig= 1;
+fluxMth ='HLLC'; % LF, ROE, RUS, AUSM, HLLE, HLLC.
+plot_fig= true;
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -89,7 +89,7 @@ q=q0; it=0; dt=dt0; t=0; lambda=lambda0;
 %% Solver Loop
 switch method
     case 1 % MUSCL
-        Method = 'MUSCL'
+        Method = 'MUSCL';
         while t<tFinal
             % Compute primary properties
             r=q(1,:); u=q(2,:)./r; E=q(3,:)./r; p=(gamma-1)*r.*(E-0.5*u.^2); a=sqrt(gamma*p./r);
@@ -118,7 +118,7 @@ switch method
 
             % Plot figure
             if rem(it,10) == 0
-                if plot_fig == 1
+                if plot_fig == true
                     subplot(2,2,1); plot(xc,r(2:nx-1),'.b',xe,re);
                     subplot(2,2,2); plot(xc,u(2:nx-1),'.m',xe,ue); 
                     subplot(2,2,3); plot(xc,p(2:nx-1),'.k',xe,pe); 
@@ -157,7 +157,7 @@ switch method
 
             % Plot figure
             if rem(it,10) == 0
-                if plot_fig == 1
+                if plot_fig == true
                     subplot(2,2,1); plot(xc,r(2:nx-1),'.b',xe,re);
                     subplot(2,2,2); plot(xc,u(2:nx-1),'.m',xe,ue); 
                     subplot(2,2,3); plot(xc,p(2:nx-1),'.k',xe,pe); 

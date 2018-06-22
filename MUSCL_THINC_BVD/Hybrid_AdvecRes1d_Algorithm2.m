@@ -71,7 +71,7 @@ w2p = alpha2p./alphasump;
 % Numerical Flux at cell boundary, $u_{i-1/2}^{+}$;
 qimh_W = w0p.*p0p + w1p.*p1p + w2p.*p2p;
 
-%% THINC reconstruction
+%% 3. THINC reconstruction
 % Constants parameters
 Beta=1.6; epsilon=1E-20; delta=1E-4;
 
@@ -105,7 +105,7 @@ TBV_W = min( cat(3,...
     abs(circshift(qiph_W,+1)-qimh_W)+abs(qiph_W-circshift(qimh_T,-1)),...
     abs(circshift(qiph_T,+1)-qimh_W)+abs(qiph_W-circshift(qimh_W,-1))),[],3);
 
-%% 3. BVD Algorithm
+%% 4. BVD Algorithm
 condition = delta<C & C<(1-delta) & ((qip1-qi).*(qi-qim1))>0 & TBV_T<TBV_W;
 qiph_W(condition)=qiph_T(condition); qL=circshift(qiph_W,0);
 qimh_W(condition)=qimh_T(condition); qR=circshift(qimh_W,-1);

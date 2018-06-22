@@ -42,16 +42,17 @@ clear; %close all; clc;
 
 %% Parameters
    nx = 0200;	% number of cells
-  CFL = 0.20;	% Courant Number
- tEnd = 0.40;   % End time
-limit = 'MC';   % MC, MM, VA. (only for Methd = {5,6})
-Methd = 4;      % 1:WENOZ, 2:WENOZ-THINC-BVDv2, 3:WENOZ-THINC-BVDv4, 
+  CFL = 0.50;	% Courant Number
+ tEnd = 2.00;   % End time
+limit = 'MM';   % MC, MM, VA. (only for Methd = {5,6})
+Methd = 2;      % 1:WENO5, 2:WENOZ-THINC-BVDv2, 3:WENOZ-THINC-BVDv4, 
                 % 4:THINC, 5:MUSCL-THINC-BVDv2, 6:MUSCL-THINC-BVDv4.             
 % NOTE:
 %  XMETHOD-THINC-BVDv1 (algorithm 1) is similar to algorithm 4 and
 %  XMETHOD-THINC-BVDv3 (algorithm 3) is the multidimensional formulation.
+%   WENO5-THINC-BVDv2  (algorithm 2) seems to be the most stable formulation.
 
-fluxfun='buckley'; % select flux function
+fluxfun='linear'; % select flux function
 % Define our Flux function
 switch fluxfun
     case 'linear'   % Scalar Advection, CFL_max: 0.65
@@ -78,12 +79,12 @@ end
 a=-1; b=1; dx=(b-a)/nx; x=a+dx/2:dx:b; 
 
 % Build IC
-ICcase=2;  % {1}Testing, {2}Costum ICs
+ICcase=1;  % {1}Testing, {2}Costum ICs
 switch ICcase
     case 1 % Testing IC
         u0=TestingIC(x);  % Jiang and Shu IC
     case 2 % Guassian IC
-        u0=CommonIC(x,9); % cases 1-10 <- check them out!
+        u0=CommonIC(x,10); % cases 1-10 <- check them out!
     otherwise
         error('IC file not listed');
 end

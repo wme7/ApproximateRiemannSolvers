@@ -35,7 +35,7 @@ global gamma
     % Coeficients
     qmin = min(cat(3,qim1,qip1),[],3);
     qmax = max(cat(3,qim1,qip1),[],3)-qmin;
-    theta= sign(qip1-qim1);
+    theta= sign(qip1-qim1); %theta(theta==0)=1;
     C = (qi-qmin+epsilon)./(qmax+epsilon);
     B = exp(Beta_s*theta.*(2*C-1));
     A = (B/cosh(Beta_s)-1)/tanh(Beta_s);

@@ -70,15 +70,15 @@ global gamma
     qimh_M(:,J) = qi(:,J) - dq(:,J)/2;	% q_{j-1/2}^{+} from j 
 
     %% THINC reconstruction
-    % 2.2 Compute fix coefficients for THINC reconstruction
+    % 2.1 Compute fix coefficients for THINC reconstruction
     qmin = min(cat(3,qim1,qip1),[],3);
     qmax = max(cat(3,qim1,qip1),[],3)-qmin;
-    theta= sign(qip1-qim1);
+    theta= sign(qip1-qim1); %theta(theta==0)=1;
     C = (qi-qmin+epsilon)./(qmax+epsilon);
     B = exp(Beta*theta.*(2*C-1));
     A = (B/cosh(Beta)-1)/tanh(Beta);
 
-    % 2.3 Compute q_{i+1/2}^{-} and q_{i-1/2}^{+} THINC reconstructions 
+    % 2.2 Compute q_{i+1/2}^{-} and q_{i-1/2}^{+} THINC reconstructions 
     qiph_T = qmin + 0.5*qmax.*(1+theta.*(tanh(Beta)+A)./(1+A*tanh(Beta)));
     qimh_T = qmin + 0.5*qmax.*(1+theta.*A);
 

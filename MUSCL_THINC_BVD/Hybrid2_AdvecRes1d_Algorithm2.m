@@ -3,7 +3,7 @@ function res = Hybrid2_AdvecRes1d_Algorithm2(qi,flux,dflux,S,dx,limiter)
 % MUSCL-THINC-BVD implementation for scalar advection Equations 
 %   -- Algorithm 2 
 %
-%% MUSCL reconstruction 
+%% 1. MUSCL reconstruction 
 
 % Initial Arrays      
 % qi = q;  % : q_{ j }^{n},
@@ -35,9 +35,9 @@ end
 qiph_M = qi+dq/2;	% q_{j+1/2}^{-} from cell j
 qimh_M = qi-dq/2;	% q_{j+1/2}^{+} from cell j
 
-%% THINC reconstruction
+%% 2. THINC reconstruction
 % Constants parameters
-Beta=1.6; epsilon=1E-20; delta=1E-4;
+Beta=1.8; epsilon=1E-20; delta=1E-4;
 
 % Coeficients
 qmin = min(cat(3,qim1,qip1),[],3);
