@@ -37,7 +37,7 @@ qimh_M = qi-dq/2;	% q_{j+1/2}^{+} from cell j
 
 %% 2. THINC reconstruction
 % Constants parameters
-Beta=1.8; epsilon=1E-20; delta=1E-4;
+Beta=1.6; epsilon=1E-20; delta=1E-4;
 
 % Coeficients
 qmin = min(cat(3,qim1,qip1),[],3);

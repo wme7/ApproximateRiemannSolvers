@@ -38,7 +38,7 @@ TBV_M = abs(circshift(qiph_M,+1)-qimh_M)+abs(qiph_M-circshift(qimh_M,-1));
 
 %% 2. THINC reconstruction
 % Constants parameters
-Beta=1.8; epsilon = 1E-20;
+Beta=1.6; epsilon = 1E-20;
 
 % Coeficients
 qmin = min(cat(3,qim1,qip1),[],3);

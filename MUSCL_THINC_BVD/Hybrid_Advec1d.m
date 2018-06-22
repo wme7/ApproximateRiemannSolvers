@@ -45,7 +45,7 @@ clear; %close all; clc;
   CFL = 0.50;	% Courant Number
  tEnd = 2.00;   % End time
 limit = 'MM';   % MC, MM, VA. (only for Methd = {5,6})
-Methd = 2;      % 1:WENO5, 2:WENOZ-THINC-BVDv2, 3:WENOZ-THINC-BVDv4, 
+Methd = 4;      % 1:WENO5, 2:WENOZ-THINC-BVDv2, 3:WENOZ-THINC-BVDv4, 
                 % 4:THINC, 5:MUSCL-THINC-BVDv2, 6:MUSCL-THINC-BVDv4.             
 % NOTE:
 %  XMETHOD-THINC-BVDv1 (algorithm 1) is similar to algorithm 4 and

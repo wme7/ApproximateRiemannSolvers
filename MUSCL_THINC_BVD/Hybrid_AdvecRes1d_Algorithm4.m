@@ -76,7 +76,7 @@ TBV_W = abs(circshift(qiph_W,+1)-qimh_W)+abs(qiph_W-circshift(qimh_W,-1));
 
 %% 3. THINC reconstruction
 % Constants parameters
-Beta=1.6; epsilon = 1E-20;
+Beta=1.8; epsilon = 1E-20;
 
 % Initial Arrays      
 % qi = q;  % : q_{ j }^{n},
