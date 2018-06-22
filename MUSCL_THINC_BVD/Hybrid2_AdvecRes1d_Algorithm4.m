@@ -66,7 +66,7 @@ qimh_M(condition)=qimh_T(condition); qR=circshift(qimh_M,-1);
 
 %% Compute Lax-Friedrichs numerical flux and update solution
 LF = 0.5*(flux(qL)+flux(qR)-abs(dflux(qi)).*(qR-qL)); % Lax friedrichs flux
-res = (LF-circshift(LF,1))/dx - S(qi); % L = df(q)/dx + S(q).
+res = (LF-circshift(LF,1))/dx - S(qi); % L = - df(q)/dx + S(q).
 
 end
 
