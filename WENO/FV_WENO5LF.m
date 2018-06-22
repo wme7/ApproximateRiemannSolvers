@@ -62,17 +62,17 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    dF=FV_WENO5LF1d(q,max(lambda(:)),nx,dx);     q = qo-dt*dF;
+    dF=FV_WENO5LF_1d(q,max(lambda(:)),nx,dx);     q = qo-dt*dF;
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
     % 2nd Stage
-    dF=FV_WENO5LF1d(q,max(lambda(:)),nx,dx);     q = 0.75*qo+0.25*(q-dt*dF);
+    dF=FV_WENO5LF_1d(q,max(lambda(:)),nx,dx);     q = 0.75*qo+0.25*(q-dt*dF);
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
     % 3rd stage
-    dF=FV_WENO5LF1d(q,max(lambda(:)),nx,dx);     q = (qo+2*(q-dt*dF))/3;
+    dF=FV_WENO5LF_1d(q,max(lambda(:)),nx,dx);     q = (qo+2*(q-dt*dF))/3;
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
@@ -85,7 +85,7 @@ while t<tFinal
     
     % Plot figure
     if rem(it,10) == 0
-        if plot_fig == 1;
+        if plot_fig == 1
             subplot(2,2,1); plot(xc,r(3:nx-2),'.b',xe,re);
             subplot(2,2,2); plot(xc,u(3:nx-2),'.m',xe,ue);
             subplot(2,2,3); plot(xc,p(3:nx-2),'.k',xe,pe);

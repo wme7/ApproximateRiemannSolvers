@@ -1,4 +1,4 @@
-function [res] = MUSCL2d_EulerRes2d(q,gamma,dt,dx,dy,N,M,limiter,assembly)
+function [res] = MUSCL2d_EulerRes2d_v2(q,gamma,dt,dx,dy,N,M,limiter,assembly)
 %   A genuine 2d HLLE Riemnan solver for Euler Equations.
 %   Following details in ref [1].:
 %
@@ -13,7 +13,7 @@ function [res] = MUSCL2d_EulerRes2d(q,gamma,dt,dx,dy,N,M,limiter,assembly)
     %normals = {[0,1], [1,0], [0,-1], [-1,0]}; % i.e.: [N, E, S, W] 
     
     % Build cells
-    C(M,N).q = zeros(4,1);
+    C(M,N).q = zeros(4,1); D(M-1,N-1).q = zeros(4,1);
     for i = 1:M
         for j = 1:N
             C(i,j).q = [q(i,j,1);q(i,j,2);q(i,j,3);q(i,j,4)];
@@ -26,7 +26,7 @@ function [res] = MUSCL2d_EulerRes2d(q,gamma,dt,dx,dy,N,M,limiter,assembly)
     % Compute and limit slopes at cells (i,j)
     for i = 2:M-1       % only internal cells
         for j = 2:N-1   % only internal cells
-            for k = 1:4;
+            for k = 1:4
                 dqw = 2*(C( i,j ).q(k) - C(i,j-1).q(k))/dx; % du btn j and j-1
                 dqe = 2*(C(i,j+1).q(k) - C( i,j ).q(k))/dx; % du btn j+1 and j
                 dqs = 2*(C( i,j ).q(k) - C(i-1,j).q(k))/dy; % du btn i and i-1
@@ -55,162 +55,66 @@ function [res] = MUSCL2d_EulerRes2d(q,gamma,dt,dx,dy,N,M,limiter,assembly)
         end
     end
 
-	%%%%%%%%%%%%%
-    % Residuals %
-    %%%%%%%%%%%%%
+	%%%%%%%%%%%%%%%%%%%%
+    % Build Dual Cells %
+    %%%%%%%%%%%%%%%%%%%%
     
-    % Compute residuals 
-    for i = 2:M-1
-        for j = 2:N-2
-            % Compute fluxes
-            %[f2N,f2S,g2E,g2W,f1N,f1S,g1E,g1W,sN,sS,sE,sW]
-            [~,D1f2S,~,~,~,D1f1S,~,~,D1Sn,D1Ss,~,~] = ... % Dual cell 1
-                HLLE2d(C(i,j),C(i,j+1),C(i+1,j),C(i+1,j+1),gamma,dx,dy);
-            
-            [D2f2N,~,~,~,D2f1N,~,~,~,D2Sn,D2Ss,~,~] = ... % Dual cell 2
-                HLLE2d(C(i-1,j),C(i-1,j+1),C(i,j),C(i,j+1),gamma,dx,dy);
-            
+    % Compute Dual cells contributions 
+    for i = 1:M-1
+        for j = 1:N-1
             switch assembly
                 case 'manual'   % Manually assemble the fluxes
-                    thyD1 = dt/(2*dy)*max(D1Ss,D1Sn);
-                    thyD2 = dt/(2*dy)*max(D2Ss,D2Sn);
-                    thy = 1 - thyD1 - thyD2;
-                    flux = thyD1*D1f2S + thy*(D1f1S+D2f1N)/2 + thyD2*D2f2N;
+                    [f2N,f2S,g2E,g2W,f1N,f1S,g1E,g1W,sN,sS,sE,sW] = ...
+                        HLLE2d(C(i,j),C(i,j+1),C(i+1,j),C(i+1,j+1),gamma,dx,dy);
+                    D(i,j).F2d={f2N;f2S;g2E;g2W};
+                    D(i,j).F1d={f1N;f1S;g1E;g1W};
+                    D(i,j).S=abs([sN;sS;sE;sW]);
                 case 'simpson'  % Using simpsons rule
-                    flux = 0;
+                    [foo,goo,f1N,f1S,g1E,g1W,sN,sS,sE,sW] = ...
+                        HLLE2d_SS(C(i,j),C(i,j+1),C(i+1,j),C(i+1,j+1),gamma,dx,dy);
+                    D(i,j).F2d={foo,goo};
+                    D(i,j).F1d={f1N;f1S;g1E;g1W};
+                    D(i,j).S=abs([sN;sS;sE;sW]);
                 otherwise
                     error('not a valid assemble :/');
             end
-            
-            % Contributions to the residual of cell (i,j) and cells around it
-            C(i, j ).res = C( i , j ).res + flux/dx;
-            C(i,j+1).res = C( i ,j+1).res - flux/dx;
         end
     end
     
-    for i = 2:M-2
+    %%%%%%%%%%%%%%%%%%%
+    % Assemble fluxes %
+    %%%%%%%%%%%%%%%%%%%
+    
+    % Using the constributions of the dual cells we assemble the fluxes
+    for i = 2:M-1
         for j = 2:N-1
-            % Compute fluxes
-            [~,~,D1g2E,~,~,~,D1g1E,~,~,~,D1Se,D1Sw] = ... % Dual cell 1
-                HLLE2d(C(i,j),C(i,j+1),C(i+1,j),C(i+1,j+1),gamma,dx,dy);
-            
-            [~,~,~,D3g2W,~,~,~,D3g1W,~,~,D3Se,D3Sw] = ... % Dual cell 3
-                HLLE2d(C(i,j-1),C(i,j),C(i+1,j),C(i+1,j-1),gamma,dx,dy);
-            
+            D1=D(i,j); D2=D(i-1,j); D3=D(i,j-1); D4=D(i-1,j-1);
             switch assembly
                 case 'manual'   % Manually assemble the fluxes
-                    thxD1 = dt/(2*dx)*max(D1Se,D1Sw);
-                    thxD3 = dt/(2*dx)*max(D3Se,D3Sw);
-                    thx = 1 - thxD1 - thxD3;
-                    flux = thxD3*D3g2W + thx*(D1g1E+D3g1W)/2 + thxD1*D1g2E;
+                    thyD1 = dt/(2*dy)*max(D1.S(1),D1.S(2));
+                    thyD2 = dt/(2*dy)*max(D2.S(1),D2.S(2));
+                    thy = 1-thyD1-thyD2;
+                    xfluxE = thyD1*D1.F2d{2} + thy*(D1.F1d{2}+D2.F1d{1})/2 + thyD2*D2.F2d{1};
+                    thxD1 = dt/(2*dx)*max(D1.S(3),D1.S(4));
+                    thxD3 = dt/(2*dx)*max(D3.S(3),D3.S(4));
+                    thx = 1-thxD1-thxD3;
+                    yfluxN = thxD1*D1.F2d{3} + thx*(D1.F1d{3}+D3.F1d{4})/2 + thxD3*D3.F2d{4};
+                    thxD2 = dt/(2*dx)*max(D2.S(3),D2.S(4));
+                    thxD4 = dt/(2*dx)*max(D4.S(3),D4.S(4));
+                    thx = 1-thxD2-thxD4;
+                    yfluxS = thxD2*D2.F2d{3} + thx*(D2.F1d{3}+D4.F1d{4})/2 + thxD4*D4.F2d{4};
+                    thyD3 = dt/(2*dy)*max(D3.S(1),D3.S(2));
+                    thyD4 = dt/(2*dy)*max(D4.S(1),D4.S(2));
+                    thy = 1-thyD3-thyD4;
+                    xfluxW = thyD4*D4.F2d{2} + thy*(D4.F1d{2}+D3.F1d{1})/2 + thyD3*D3.F2d{1};
                 case 'simpson'  % Using simpsons rule
-                    flux = 0;
-                otherwise
-                    error('not a valid assemble :/');
+                    xfluxE = D1.F2d{1}/6 + 2*(D1.F1d{2}+D2.F1d{1})/6 + D2.F2d{1}/6;
+                    yfluxN = D1.F2d{2}/6 + 2*(D3.F1d{3}+D1.F1d{4})/6 + D3.F2d{2}/6;
+                    yfluxS = D2.F2d{2}/6 + 2*(D4.F1d{3}+D2.F1d{4})/6 + D4.F2d{2}/6;
+                    xfluxW = D4.F2d{1}/6 + 2*(D3.F1d{2}+D4.F1d{1})/6 + D3.F2d{1}/6;
             end
-            
-            % Contributions to the residual of cell (i,j) and cells around it
-            C( i ,j).res = C( i ,j).res + flux/dy;
-            C(i+1,j).res = C(i+1,j).res - flux/dy;
+            C(i,j).res = C(i,j).res + xfluxE/dx + yfluxN/dy - yfluxS/dy - xfluxW/dx;
         end
-    end
-    
-    %%%%%%%%%%%
-    % set BCs %
-    %%%%%%%%%%%
-    
-    % Flux contribution of the MOST NORTH FACE: north face of cells i=M-1.
-    for j = 2:N-1
-        % Compute fluxes
-        [~,~,D1g2E,~,~,~,D1g1E,~,~,~,D1Se,D1Sw] = ... % Dual cell 1
-            HLLE2d(C(M-1,j),C(M-1,j+1),C(M,j),C(M,j+1),gamma,dx,dy);
-
-        [~,~,~,D3g2W,~,~,~,D3g1W,~,~,D3Se,D3Sw] = ... % Dual cell 3
-            HLLE2d(C(M-1,j-1),C(M-1,j),C(M,j),C(M,j-1),gamma,dx,dy);
-
-        switch assembly
-            case 'manual'   % Manually assemble the fluxes
-                thxD1 = dt/(2*dx)*max(D1Se,D1Sw);
-                thxD3 = dt/(2*dx)*max(D3Se,D3Sw);
-                thx = 1 - thxD1 - thxD3;
-                flux = thxD3*D3g2W + thx*(D1g1E+D3g1W)/2 + thxD1*D1g2E;
-            case 'simpson'  % Using simpsons rule
-                flux = 0;
-            otherwise
-                error('not a valid assemble :/');
-        end
-
-        % Contributions to the residual of cell (i,j) and cells around it
-        C(M-1,j).res = C(M-1,j).res + flux/dy;
-    end
-     
-    % Flux contribution of the MOST SOUTH FACE: south face of cells i=2.
-    for j = 2:N-1
-        % Compute fluxes
-        [~,~,D1g2E,~,~,~,D1g1E,~,~,~,D1Se,D1Sw] = ... % Dual cell 1
-            HLLE2d(C(1,j),C(1,j+1),C(2,j),C(2,j+1),gamma,dx,dy);
-
-        [~,~,~,D3g2W,~,~,~,D3g1W,~,~,D3Se,D3Sw] = ... % Dual cell 3
-            HLLE2d(C(1,j-1),C(1,j),C(2,j),C(2,j-1),gamma,dx,dy);
-
-        switch assembly
-            case 'manual'   % Manually assemble the fluxes
-                thxD1 = dt/(2*dx)*max(D1Se,D1Sw);
-                thxD3 = dt/(2*dx)*max(D3Se,D3Sw);
-                thx = 1 - thxD1 - thxD3;
-                flux = thxD3*D3g2W + thx*(D1g1E+D3g1W)/2 + thxD1*D1g2E;
-            case 'simpson'  % Using simpsons rule
-                flux = 0;
-            otherwise
-                error('not a valid assemble :/');
-        end
-
-        % Contributions to the residual of cell (i,j) and cells around it
-        C(2,j).res = C(2,j).res - flux/dy;
-    end
-
-    % Flux contribution of the MOST EAST FACE: east face of cell j=N-1.
-    for i = 2:M-1
-        [~,D1f2S,~,~,~,D1f1S,~,~,D1Sn,D1Ss,~,~] = ... % Dual cell 1
-            HLLE2d(C(i,N-1),C(i,N),C(i+1,N-1),C(i+1,N),gamma,dx,dy);
-
-        [D2f2N,~,~,~,D2f1N,~,~,~,D2Sn,D2Ss,~,~] = ... % Dual cell 2
-            HLLE2d(C(i-1,N-1),C(i-1,N),C(i,N-1),C(i,N),gamma,dx,dy);
-
-        switch assembly
-            case 'manual'   % Manually assemble the fluxes
-                thyD1 = dt/(2*dy)*max(D1Ss,D1Sn);
-                thyD2 = dt/(2*dy)*max(D2Ss,D2Sn);
-                thy = 1 - thyD1 - thyD2;
-                flux = thyD1*D1f2S + thy*(D1f1S+D2f1N)/2 + thyD2*D2f2N;
-            case 'simpson'  % Using simpsons rule
-                flux = 0;
-            otherwise
-                error('not a valid assemble :/');
-        end
-        C(i,N-1).res = C(i,N-1).res + flux/dx;
-    end
-
-    % Flux contribution of the MOST WEST FACE: west face of cells j=2.
-    for i = 2:M-1
-        [~,D1f2S,~,~,~,D1f1S,~,~,D1Sn,D1Ss,~,~] = ... % Dual cell 1
-            HLLE2d(C(i,1),C(i,2),C(i+1,1),C(i+1,2),gamma,dx,dy);
-
-        [D2f2N,~,~,~,D2f1N,~,~,~,D2Sn,D2Ss,~,~] = ... % Dual cell 2
-            HLLE2d(C(i-1,1),C(i-1,2),C(i,1),C(i,2),gamma,dx,dy);
-
-        switch assembly
-            case 'manual'   % Manually assemble the fluxes
-                thyD1 = dt/(2*dy)*max(D1Ss,D1Sn);
-                thyD2 = dt/(2*dy)*max(D2Ss,D2Sn);
-                thy = 1 - thyD1 - thyD2;
-                flux = thyD1*D1f2S + thy*(D1f1S+D2f1N)/2 + thyD2*D2f2N;
-            case 'simpson'  % Using simpsons rule
-                flux = 0;
-            otherwise
-                error('not a valid assemble :/');
-        end
-        C(i,2).res = C(i,2).res - flux/dx;
     end
     
     % Prepare residual as layers: [rho, rho*u, rho*v, rho*E]
@@ -468,5 +372,88 @@ function [fooN,fooS,gooE,gooW,fNo,fSo,goE,goW,sN,sS,sE,sW] = ...
         fooS = ((sY+sS)*fSo-sS*foo)/sY;
         gooE = ((sX-sE)*goE+sE*goo)/sX;
         gooW = ((sX+sW)*goW-sW*goo)/sX;
+    end
+end
+
+function [foo,goo,fNo,fSo,goE,goW,sN,sS,sE,sW] = ...
+    HLLE2d_SS(C1,C2,C3,C4,gamma,dx,dy)
+    % Compute HLLE2d and HLLE1d fluxes for simpsons rule assembly.
+    % [1] J. Vides, B. Nkonga, E. Audit, A simple two-dimensional extension
+    % of the HLL Riemann solver for hyperbolic systems of conservation laws,
+    % Journal of Computational Physics, Volume 280, 1 January 2015.
+
+    % Build 2d following ideas in refernce [1]
+    qSoL= C1.q + C1.dqdx*dx/2; % q_{ i ,j+1/2}^{-} from ( i , j )
+    qSoR= C2.q - C2.dqdx*dx/2; % q_{ i ,j+1/2}^{+} from ( i ,j+1)
+    [qSo,fSo,gSo,sSW,sSE]=HLLE1d(qSoL,qSoR,gamma,[1,0]); % mid state, flux and wave speeds
+
+    qoWL= C1.q + C1.dqdy*dy/2; % q_{i+1/2, j }^{-} from ( i , j )
+    qoWR= C3.q - C3.dqdy*dy/2; % q_{i+1/2, j }^{-} from (i+1, j )
+    [qoW,goW,foW,sWS,sWN]=HLLE1d(qoWL,qoWR,gamma,[0,1]); % mid state, flux and wave speeds
+
+    qoEL= C2.q + C2.dqdy*dy/2; % q_{ i ,j+1/2}^{-} from ( i ,j+1)
+    qoER= C4.q - C4.dqdy*dy/2; % q_{ i ,j+1/2}^{-} from (i+1,j+1)
+    [qoE,goE,foE,sES,sEN]=HLLE1d(qoEL,qoER,gamma,[0,1]); % mid state, flux and wave speeds
+
+    qNoL= C3.q + C3.dqdx*dx/2; % q_{i+1/2, j }^{-} from (i+1, j )
+    qNoR= C4.q - C4.dqdx*dx/2; % q_{i+1/2, j }^{-} from (i+1,j+1)
+    [qNo,fNo,gNo,sNW,sNE]=HLLE1d(qNoL,qNoR,gamma,[1,0]); % mid state, flux and wave speeds     
+
+    % Restrict certain crossings
+    if (sNE < 0) && (sEN <0)        % Northeast
+        if sWN > 0; sEN = 0; end
+        if sSE > 0; sNE = 0; end
+    end
+    if (sNW < 0) && (sWN <0)        % Northwest
+        if sSW > 0; sNW = 0; end
+        if sEN > 0; sWN = 0; end
+    end
+    if (sSW < 0) && (sWS <0)        % Southwest
+        if sNW > 0; sSW = 0; end
+        if sES > 0; sWS = 0; end
+    end
+    if (sSE < 0) && (sES <0)        % Southeast
+        if sNE > 0; sSE = 0; end
+        if sWS > 0; sES = 0; end
+    end
+    
+    % Precompute deltas
+    dq1 = sNW*sEN-sWN*sNE; df1 = sWN-sEN; dg1 = sNE-sNW;
+    dq2 = sSW*sWN-sWS*sNW; df2 = sWS-sWN; dg2 = sNW-sSW;
+    dq3 = sSE*sWS-sES*sSW; df3 = sES-sWS; dg3 = sSW-sSE;
+    dq4 = sNE*sES-sEN*sSE; df4 = sEN-sES; dg4 = sSE-sNE;
+
+    % Precompute c1 and c2
+    c1 = dq1*dq3*(qNo-qSo) + df1*dq3*fNo - df3*dq1*fSo + dg1*dq3*gNo - dg3*dq1*gSo;
+    c2 = dq4*dq2*(qoE-qoW) + df4*dq2*foE - df2*dq4*foW + dg4*dq2*goE - dg2*dq4*goW;
+
+    % Precompute elements of inv(AII) = 1/(a*d-b*c)*[d,-b;-c,a]
+    a11 = df1*dq3-df3*dq1;    a12 = dg1*dq3-dg3*dq1;
+    a21 = df4*dq2-df2*dq4;    a22 = dg4*dq2-dg2*dq4;
+
+    % Compute fluxes of the Strongly Interacting state: f** and g**
+    foo=( a22*c1-a12*c2)/(a11*a22-a12*a21);
+    goo=(-a21*c1+a11*c2)/(a11*a22-a12*a21);
+
+    % Define speeds \tilde{s}_alpha for alpha \in (N,S,E,W)
+    if (sES>=0) && (sWS>=0)     % Above x-axis
+        sE = sSE;
+        sW = sSW;
+    elseif (sEN<=0) && (sWN<=0) % Below x-axis
+        sE = sNE;
+        sW = sNW;
+    else
+        sE = max(sNE,0)-max(sEN,0)*(max(sSE,0)-max(sNE,0))/(min(sES,0)-max(sEN,0));
+        sW = min(sSW,0)-min(sWS,0)*(min(sNW,0)-min(sSW,0))/(max(sWN,0)-min(sWS,0));
+    end
+    if (sNW>=0) && (sSW>=0)     % Right of y-axis
+        sN = sWN;
+        sS = sWS;
+    elseif (sNE<=0) && (sSE<=0) % Left of y-axis
+        sN = sEN;
+        sS = sES;
+    else
+        sN = max(sWN,0)-min(sNW,0)*(max(sWN,0)-max(sEN,0))/(min(sNW,0)-max(sNE,0));
+        sS = min(sES,0)-max(sSE,0)*(min(sES,0)-min(sWS,0))/(max(sSE,0)-min(sSW,0));
     end
 end

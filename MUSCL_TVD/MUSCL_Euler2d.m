@@ -19,27 +19,24 @@
 %   Journal of Computational Physics 231.22 (2012): 7476-7503. 
 %   [3] Einfeldt, Bernd. "On Godunov-type methods for gas dynamics." SIAM
 %   Journal on Numerical Analysis 25.2 (1988): 294-318. 
-%   [4] Kurganov, Alexander, and Eitan Tadmor. "Solution of two-dimensional
+%   [4] Kurganov, Alexander, and Eitan Tadmor. "Solution of two?dimensional
 %   Riemann problems for gas dynamics without Riemann problem solvers."
 %   Numerical Methods for Partial Differential Equations 18.5 (2002): 584-608. 
-%   [5] Vides, Jeaniffer, Boniface Nkonga, and Edouard Audit. "A simple
-%   two-dimensional extension of the HLL Riemann solver for gas dynamics."
-%   (2014). 
 %
 % coded by Manuel Diaz, 2015.05.10
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-clear; %clc; close all;
+%clear; close all; clc;
 
 %% Parameters
-CFL     = 0.90;     % CFL number
-tEnd    = 0.30;     % Final time
+CFL     = 0.50;     % CFL number
+tEnd    = 0.25;     % Final time
 nx      = 100;      % Number of cells/Elements in x
 ny      = 100;      % Number of cells/Elements in y
-n       = 5;        % Number of degrees of freedom
-assmbl  ='simpson';	% 'manual' or 'simpson'
+n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
-limiter ='MC';      % MM, MC, VA, VL.
+limiter ='MC';      % MM, MC, VA.
+fluxMth ='HLLC';	% LF, RUS, ROE, HLLE, HLLC.
 plot_fig= 1;        % 1:visualize evolution 
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -52,7 +49,6 @@ Ly=1; dy=Ly/ny; yc=dy/2:dy:Ly;
 
 % Set IC
 [r0,u0,v0,p0] = Euler_IC2d(x,y,IC);
-%[r0,u0,v0,p0] = Continuum_IC2d(x,y);
 E0 = p0./((gamma-1)*r0)+0.5*(u0.^2+v0.^2);  % Total Energy
 c0 = sqrt(gamma*p0./r0);                    % Speed of sound
 Q0 = cat(3, r0, r0.*u0, r0.*v0, r0.*E0);    % initial state
@@ -71,28 +67,28 @@ dt0=CFL*min(dx./a0,dy./a0);
 
 % Initialize parpool
 poolobj = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(poolobj); parpool('local',2); end
+if isempty(poolobj); parpool('local',4); end
 
 % Load IC
-q=q0; t=0; it=0; dt=dt0; a=a0;
+q=q0; t=dt0; it=0; dt=dt0; a=a0;
 
 % Solver Loop
 tic
 while t < tEnd
     
     % RK2 1st step
-    qs = q - dt*MUSCL2d_EulerRes2d_v2(q,gamma,dt,dx,dy,nx,ny,limiter,assmbl);
+    qs = q - dt*MUSCL_EulerRes2d(q,a,gamma,dx,dy,nx,ny,limiter,fluxMth);
     
-    q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
-    q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
+    qs(:,1,:)=qs(:,2,:); qs(:,nx,:)=qs(:,nx-1,:);   % Natural BCs
+    qs(1,:,:)=qs(2,:,:); qs(ny,:,:)=qs(ny-1,:,:);   % Natural BCs
     
     % RK2 2nd step / update q
-    q = 0.5*(q + qs - dt*MUSCL2d_EulerRes2d_v2(qs,gamma,dt,dx,dy,nx,ny,limiter,assmbl));
+    q = (q + qs - dt*MUSCL_EulerRes2d(qs,a,gamma,dx,dy,nx,ny,limiter,fluxMth))/2;
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
     
-	% Compute flow properties
+	% compute flow properties
     r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r;
     p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2)); c=sqrt(gamma*p./r);
     
@@ -103,9 +99,8 @@ while t < tEnd
 	t=t+dt; it=it+1;
     
     % Plot figure
-    if rem(it,1) == 0
-        if plot_fig == 1;
-            surf(r)
+    if rem(it,10) == 0
+        if plot_fig == 1
             subplot(2,2,1); contourf(x,y,r(2:ny-1,2:nx-1)); axis('square');
             subplot(2,2,2); contourf(x,y,u(2:ny-1,2:nx-1)); axis('square');
             subplot(2,2,3); contourf(x,y,v(2:ny-1,2:nx-1)); axis('square');
@@ -135,12 +130,11 @@ r_y = r.*v;             % Mass Flow rate per unit area
 e = p./((gamma-1)*r);   % internal Energy
 
 %% Final plot
-figure(2); offset=0.05; n=22; % contour lines
-% surf(x,y,r);
+offset=0.05; n=22; % contour lines
 s1=subplot(2,3,1); contour(x,y,r,n); axis('square'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
 s2=subplot(2,3,2); contour(x,y,U,n); axis('square'); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
 s3=subplot(2,3,3); contour(x,y,p,n); axis('square'); xlabel('x(m)'); ylabel('Pressure (Pa)');
 s4=subplot(2,3,4); contour(x,y,ss,n);axis('square'); xlabel('x(m)'); ylabel('Entropy/R gas');
 s5=subplot(2,3,5); contour(x,y,M,n); axis('square'); xlabel('x(m)'); ylabel('Mach number');
 s6=subplot(2,3,6); contour(x,y,e,n); axis('square'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,'MUSCL Euler 2-D Solver');
+title(s1,['MUSCL Euler ',fluxMth,' 2-D solver']);

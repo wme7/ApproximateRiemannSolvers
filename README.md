@@ -8,6 +8,12 @@ Completed 1D solvers list:
 * MUSCL-AUSM FV-solver
 * MUSCL-Einfeldt HLL (HLLE) FV-solver
 * MUSCL-HLL Contact (HLLC) FV-solver
+* MUSCL-THINC-Lax Friedrichs FV-solver
+* MUSCL-THINC-ROE FV-solver
+* MUSCL-THINC-Rusanov (Rus) FV-solver
+* MUSCL-THINC-AUSM FV-solver
+* MUSCL-THINC-Einfeldt HLL (HLLE) FV-solver
+* MUSCL-THINC-HLL Contact (HLLC) FV-solver
 * WENO-Lax Friedrichs FD-solver
 * WENO-Rusanov FD-solver
 * WENO-Splitted HLL (SHLL) FD-solver

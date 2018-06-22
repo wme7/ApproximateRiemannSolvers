@@ -40,7 +40,7 @@ function [res] = MUSCL_EulerRes2d(q,smax,gamma,dx,dy,N,M,limiter,fluxMethod)
     % Compute and limit slopes at cells (i,j)
     for i = 2:M-1       % only internal cells
         for j = 2:N-1   % only internal cells
-            for k = 1:4;
+            for k = 1:4
                 switch limiter
                     case 'MC' % MC limiter
                         % Find dq_j = minmod{fwd diff, bwd diff, cntrl diff}
@@ -219,7 +219,7 @@ function mm = minmod(v)
     % Using Harten's generalized definition
     % minmod: zero if opposite sign, otherwise the one of smaller magnitude.
     s = sum(sign(v))/numel(v); 
-    if abs(s)==1; mm = s*min(abs(v(:))); else mm=0; end
+    if abs(s)==1; mm = s*min(abs(v(:))); else, mm=0; end
     %m=size(v,1); mm=zeros(size(v,1),1); s=sum(sign(v),2)/m; ids=find(abs(s)==1);
     %if(~isempty(ids)); mm(ids)=s(ids).*min(abs(v(ids,:)),[],2); end
 end
@@ -470,8 +470,8 @@ function HLLC = HLLCflux(qL,qR,gamma,normal)
       end
 
     % Estimate wave speeds: SL, SR and SM (Toro, 1994)
-    if pM>pL; zL=sqrt(1+(gamma+1)/(2*gamma)*(pM/pL-1)); else zL=1; end    
-    if pM>pR; zR=sqrt(1+(gamma+1)/(2*gamma)*(pM/pR-1)); else zR=1; end
+    if pM>pL; zL=sqrt(1+(gamma+1)/(2*gamma)*(pM/pL-1)); else, zL=1; end    
+    if pM>pR; zR=sqrt(1+(gamma+1)/(2*gamma)*(pM/pR-1)); else, zR=1; end
   
 	SL = vnL - aL*zL;
     SR = vnR + aR*zR;

@@ -1,4 +1,4 @@
-function res = FV_WENO5LF1d(w,smax,nx,dx)
+function res = FV_WENO5LF_1d(w,smax,nx,dx)
 % *************************************************************************
 % Input: u(i) = [u(i-2) u(i-1) u(i) u(i+1) u(i+2)];
 % Output: res = df/dx;

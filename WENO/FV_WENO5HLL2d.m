@@ -34,7 +34,7 @@ nx      = 100;      % Number of cells/Elements in x
 ny      = 100;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
-fluxMth ='HLLE';	% LF, RUS, ROE, HLLE, HLLC.
+fluxMth ='HLLC';	% LF, RUS, ROE, HLLE, HLLC.
 plot_fig= 1;        % 1:visualize evolution 
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -112,7 +112,7 @@ while t < tEnd
     
     % Plot figure
     if rem(it,10) == 0
-        if plot_fig == 1;
+        if plot_fig == 1
             subplot(2,2,1); contourf(x,y,r(2:ny-1,2:nx-1)); axis('square');
             subplot(2,2,2); contourf(x,y,u(2:ny-1,2:nx-1)); axis('square');
             subplot(2,2,3); contourf(x,y,v(2:ny-1,2:nx-1)); axis('square');

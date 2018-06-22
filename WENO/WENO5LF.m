@@ -91,7 +91,7 @@ while t<tFinal
     
     % Plot figure
     if rem(it,10) == 0
-        if plot_fig == 1;
+        if plot_fig == 1
             subplot(2,2,1); plot(x,rho,'.b');
             subplot(2,2,2); plot(x,u,'.m'); 
             subplot(2,2,3); plot(x,p,'.k'); 
