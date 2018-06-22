@@ -1,17 +1,41 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%              Solving 1-D wave equation with 5th order
-%          Weighted Essentially Non-Oscilaroty (MOL-WENO5-LF)
+%         Solving 1-D wave equation Hybrid numerical schemes, namely
+%
+%             Tangent Hyperbola for INterface Capturing and
+%             Monotonic Upwind Scheme for Conservation Laws 
+%                          (MUSCL-THINC-BVD) scheme
+%
+%                                  &
+%
+%               Tangent Hyperbola for INterface Capturing and
+%                    Weighted Essentially Non-Oscilaroty
+%                          (WENO5-THINC-BVD) scheme
+%
 %
 %                 du/dt + df/dx = S, for x \in [a,b]
 %                  where f = f(u): linear/nonlinear
 %                     and S = s(u): source term
 %
+%
 %             coded by Manuel Diaz, manuel.ade'at'gmail.com 
-%            Institute of Applied Mechanics, NTU, 2012.08.20
+%            Institute of Applied Mechanics, NHRI, 2018.06.20
 %                               
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Ref: C.-W. Shu, High order weighted essentially non-oscillatory schemes
-% for convection dominated problems, SIAM Review, 51:82-126, (2009). 
+% Ref: 
+% [1] Deng, Xi, Bin Xie, and Feng Xiao. "Some practical versions of
+%     boundary variation diminishing (BVD) algorithm." arXiv preprint
+%     arXiv:1708.01148 (2017).  
+% [2] Deng, Xi, et al. "Limiter-free discontinuity-capturing scheme for 
+%     compressible gas dynamics with reactive fronts." C & F (2018).
+% [3] Deng, Xi, et al. "High fidelity discontinuity-resolving
+%     reconstruction for compressible multiphase flows with moving 
+%     interfaces." Journal of Computational Physics (2018). 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  Notes: 
+% -------
+% The present implementation serves for the purpose of comparions and a
+% summary of the main hybrid algorithms reported in [1-3]. In this
+% snipets, I prioritize readability rather than code speed. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear; %close all; clc;

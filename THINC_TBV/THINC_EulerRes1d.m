@@ -20,17 +20,14 @@ function [res] = THINC_EulerRes1d(qi,smax,dx,N,fluxMethod)
 global gamma
 
     % Allocate arrays
-    res=zeros(size(qi)); 
-    flux=zeros(3,N-1); % faces 2 to N
-    qim1=zeros(size(qi));
-    qip1=zeros(size(qi));
-    qR=zeros(size(qi));
-    qL=zeros(size(qi));
+    qim1=zeros(size(qi));   qip1=zeros(size(qi));
+    TBV_s=zeros(size(qi));  TBV_l=zeros(size(qi));
+    qR=zeros(size(qi));     qL=zeros(size(qi));
 
     % Constants parameters
-    Beta_s=1.1; Beta_l=2.0; epsilon = 1E-20; J=2:N-1;
+    Beta_s=1.1; Beta_l=2.0; epsilon=1E-20; delta=1E-4; J=2:N-1;
 
-    % Initializa Arrays      
+    % Initial Arrays      
     % qi(:,J) = q(:, J );  % : q_{ j }^{n},
     qim1(:,J) = qi(:,J-1); % : q_{j-1}^{n},
     qip1(:,J) = qi(:,J+1); % : q_{j+1}^{n}.
@@ -56,27 +53,18 @@ global gamma
     qimh_l = qmin + 0.5*qmax.*(1+theta.*A);
 
     % Compute total boundary variations TBV for each cell
-    TBV_s(:,J) = abs(qiph_s(:,J+1)-qimh_s(:,J))+abs(qiph_s(:,J)-qimh_s(:,J-1)); 
-    TBV_l(:,J) = abs(qiph_l(:,J+1)-qimh_l(:,J))+abs(qiph_l(:,J)-qimh_l(:,J-1));
+    TBV_s(:,J) = abs(qiph_s(:,J-1)-qimh_s(:,J))+abs(qiph_s(:,J)-qimh_s(:,J+1)); 
+    TBV_l(:,J) = abs(qiph_l(:,J-1)-qimh_l(:,J))+abs(qiph_l(:,J)-qimh_l(:,J+1));
 
     % Adaptative THINC-BVD reconstruction
-    for k=1:3
-        for j = 2:N-1
-           if  TBV_s(k,j) < TBV_l(k,j)
-               qL(k,j) = qiph_s(k,j);
-               qR(k,j) = qimh_s(k,j+1);
-           else
-               qL(k,j) = qiph_l(k,j);
-               qR(k,j) = qimh_l(k,j+1);
-           end
-        end
-    end
-   
-%    % Left and Right extrapolated q-values at the boundary j+1/2
-%     for j = 2:N-2 % for the domain cells
-%         qL(:,j) = q(:, j ) + dq(:, j )*dx/2;	% q_{j+1/2}^{-} from j
-%         qR(:,j) = q(:,j+1) - dq(:,j+1)*dx/2;	% q_{j+1/2}^{+} from j+1
-%     end
+    condition= delta<C & C<(1-delta) & ((qip1-qi).*(qi-qim1))>0 & TBV_l<TBV_s;
+    %condition= TBV_l<TBV_s;
+    qiph_s(condition)=qiph_l(condition); qL(:,J)=qiph_s(:,J);
+    qimh_s(condition)=qimh_l(condition); qR(:,J)=qimh_s(:,J+1);
+
+    % Allocate extra Arrays
+    res=zeros(size(qi)); 
+    flux=zeros(3,N-1); % faces 2 to N
 
     % Flux contribution to the residual of every cell
     for j = 2:N-2 % for all faces the domain cells

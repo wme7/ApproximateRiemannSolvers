@@ -1,14 +1,16 @@
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%               basic MUSCL solver for Euler system equations
-%                      by Manuel Diaz, NTU, 29.04.2015
+%               basic THINC-BVD solver for Euler system equations
+%                      by Manuel Diaz, NHRI, 20.06.2018
 %
 %                             U_t + F(U)_x = 0,
 %
-% MUSCL based numerical schemes extend the idea of using a linear
-% piecewise approximation to each cell by using slope limited left and
-% right extrapolated states. This results in the following high
-% resolution, TVD discretisation scheme.   
+% THINC schemes approximate the values of a cell average by means of a
+% hyperbolic tangent reconstruction. However, the new move in this mix 
+% is the incorporation of the boundary-value-diminishing (BVD) algorithm. 
+% Here, two THINC schemes are reconstructed. Namely, a smooth and a fully
+% discontinuous reconstruction. Then, the BVD algorithm is used to choose 
+% the reconstruction that provides the lowest boundary differences.
 %
 % This code solves the Sod's shock tube problem 
 %
@@ -22,10 +24,18 @@
 %                   |                                 ****|
 %                   ***************                       ***********
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   Refs:
-%   [1] Toro, E. F., "Riemann Solvers and Numerical Methods for Fluid
-%   Dynamics" Springer-Verlag, Second Edition, 1999. 
+% Refs:
+% [1] Toro, E. F., "Riemann Solvers and Numerical Methods for Fluid
+%     Dynamics" Springer-Verlag, Second Edition, 1999.
+% [2] Deng, Xi, et al. "Limiter-free discontinuity-capturing scheme for 
+%     compressible gas dynamics with reactive fronts." C & F (2018).
 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% NOTE:
+% Currently this code is not working. I'm trying to contact the fisrt
+% author in [2] to clear some concepts. In the mean time, if anyone 
+% familiar with this implementation can spoot the problem, I'll be
+% eternally in debt with you ;) Happy coding!
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear; %clc; close all;

@@ -1,17 +1,27 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%              Solving 1-D wave equation with 5th order
-%          Weighted Essentially Non-Oscilaroty (MOL-WENO5-LF)
+%              Solving 1-D wave equation with 2nd-order
+%        Tangent Hyperbola for INterface Capturing (THINC) methods
 %
 %                 du/dt + df/dx = S, for x \in [a,b]
 %                  where f = f(u): linear/nonlinear
 %                     and S = s(u): source term
 %
 %             coded by Manuel Diaz, manuel.ade'at'gmail.com 
-%            Institute of Applied Mechanics, NTU, 2012.08.20
+%            Institute of Applied Mechanics, NHRI, 2018.06.20
 %                               
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Ref: C.-W. Shu, High order weighted essentially non-oscillatory schemes
-% for convection dominated problems, SIAM Review, 51:82-126, (2009). 
+% Refs:
+% [1] Deng, Xi, Bin Xie, and Feng Xiao. "Some practical versions of
+%     boundary variation diminishing (BVD) algorithm." arXiv preprint
+%     arXiv:1708.01148 (2017).  
+% [2] Deng, Xi, et al. "Limiter-free discontinuity-capturing scheme for 
+%     compressible gas dynamics with reactive fronts." C & F (2018). 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% NOTE:
+% Currently this code is not working. I'm trying to contact the fisrt
+% author in [2] to clear some concepts. In the mean time, if anyone 
+% familiar with this implementation can spoot the problem, I'll be
+% eternally in debt with you ;) Happy coding!
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear; %close all; clc;

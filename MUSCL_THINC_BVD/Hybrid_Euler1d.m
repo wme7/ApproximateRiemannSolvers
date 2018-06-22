@@ -1,11 +1,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%         Solving 1-D Euler system of equations with 5th order
-%          Weighted Essentially Non-Oscilaroty (MOL-WENO5-LF)
+%                Solving 1-D Euler system of equations with 
+%              2nd-order Hybrid Numerical schemes, namely with
 %
-%        dq_i/dt + df_i/dx = 0, for x \in [a,b] and i =1,. ..,D
+%          Tangent Hyperbola for INterface Capturing (THINC) and
+%         Monotonic Upwind Scheme for Conservation Laws (MUSCL).
+%
+%                   dq/dt + df(q)/dx = 0, for x in [a,b] 
 %
 %           coded by Manuel A. Diaz, manuel.ade'at'gmail.com 
-%            Institute of Applied Mechanics, NTU, 2012.08.25
+%            Institute of Applied Mechanics, NHRI, 2018.06.20
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This code solves the Sod's shock tube problem (IC=1)
@@ -22,13 +25,24 @@
 %
 % coded by Manuel A. Diaz, 2012.12.27. Last modif: 29.04.2016.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Ref: C.-W. Shu, High order weighted essentially non-oscillatory schemes
-% for convection dominated problems, SIAM Review, 51:82-126, (2009). 
+% Refs: 
+% [1] Deng, Xi, et al. "High fidelity discontinuity-resolving
+%     reconstruction for compressible multiphase flows with moving 
+%     interfaces." Journal of Computational Physics (2018).  
+% [2] Deng, Xi, Bin Xie, and Feng Xiao. "Some practical versions of
+%     boundary variation diminishing (BVD) algorithm." arXiv preprint
+%     arXiv:1708.01148 (2017). 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes: 
-% 1. A fully conservative finite difference implementation of the method of
-% lines (MOL) using WENO5 associated with SSP-RK33 time integration method. 
-% 2. Sharpenning of contact discontinuities is NOT implemented here.
+% 1. Although the scheme is formally second order a SSP-RK33 integration 
+%    method is required to improve its stability. 
+% 2. As a step forward from the HLLC method used in [1], I have coded the
+%    classical flux techniques such as: 
+%      - the ROE approximate flux, 
+%      - the Rusanov and Lax Friedrichs flux, 
+%      - the AUSM+ flux, 
+%      - the HLLE and HLLC flux functions. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear; %close all; clc;
 global gamma
