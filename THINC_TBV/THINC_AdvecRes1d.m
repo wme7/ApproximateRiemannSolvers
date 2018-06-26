@@ -4,7 +4,7 @@ function res = THINC_AdvecRes1d(qi,flux,dflux,S,dx)
 %
 %% THINC reconstruction
 % Constants parameters
-Beta_s=1.1; Beta_l=2.0; epsilon=1E-20;
+Beta_s=1.1; Beta_l=2.0; epsilon=1E-20; delta=1E-4;
 
 % Initial Arrays      
 % qi = q;  % : q_{ j }^{n},
@@ -40,7 +40,7 @@ qimh_l = qmin + 0.5*qmax.*(1+theta.*A);
 TBV_l = abs(circshift(qiph_l,+1)-qimh_l)+abs(qiph_l-circshift(qimh_l,-1));
 
 %% 3. BVD Algorithm
-condition = TBV_l < TBV_s;
+condition = delta<C & C<(1-delta) & ((qim1-qi).*(qi-qip1))>0 & TBV_l<TBV_s;
 qiph_s(condition)=qiph_l(condition); qL=circshift(qiph_s,0);
 qimh_s(condition)=qimh_l(condition); qR=circshift(qimh_s,-1);
 

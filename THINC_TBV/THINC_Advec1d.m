@@ -28,10 +28,10 @@ clear; %close all; clc;
 
 %% Parameters
    nx = 0200;	% number of cells
-  CFL = 0.20;	% Courant Number
+  CFL = 0.50;	% Courant Number
  tEnd = 0.40;   % End time
 
-fluxfun='buckley'; % select flux function
+fluxfun='linear'; % select flux function
 % Define our Flux function
 switch fluxfun
     case 'linear'   % Scalar Advection, CFL_max: 0.65
@@ -63,7 +63,7 @@ switch ICcase
     case 1 % Testing IC
         u0=TestingIC(x);  % Jiang and Shu IC
     case 2 % Guassian IC
-        u0=CommonIC(x,9); % cases 1-10 <- check them out!
+        u0=CommonIC(x,4); % cases 1-10 <- check them out!
     otherwise
         error('IC file not listed');
 end
