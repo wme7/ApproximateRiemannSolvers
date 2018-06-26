@@ -58,6 +58,7 @@ global gamma
 
     % Adaptative THINC-BVD reconstruction
     condition= delta<C & C<(1-delta) & ((qip1-qi).*(qi-qim1))>0 & TBV_l<TBV_s;
+    %condition= ((qip1-qi).*(qi-qim1))>0 & TBV_l<TBV_s;
     %condition= TBV_l<TBV_s;
     qiph_s(condition)=qiph_l(condition); qL(:,J)=qiph_s(:,J);
     qimh_s(condition)=qimh_l(condition); qR(:,J)=qimh_s(:,J+1);

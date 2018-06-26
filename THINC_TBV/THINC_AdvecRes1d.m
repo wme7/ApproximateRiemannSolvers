@@ -41,6 +41,8 @@ TBV_l = abs(circshift(qiph_l,+1)-qimh_l)+abs(qiph_l-circshift(qimh_l,-1));
 
 %% 3. BVD Algorithm
 condition = delta<C & C<(1-delta) & ((qim1-qi).*(qi-qip1))>0 & TBV_l<TBV_s;
+%condition = ((qim1-qi).*(qi-qip1))>0 & TBV_l<TBV_s;
+%condition = TBV_l<TBV_s;
 qiph_s(condition)=qiph_l(condition); qL=circshift(qiph_s,0);
 qimh_s(condition)=qimh_l(condition); qR=circshift(qimh_s,-1);
 
