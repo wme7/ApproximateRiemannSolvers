@@ -18,10 +18,11 @@
 %     compressible gas dynamics with reactive fronts." C & F (2018). 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % NOTE:
-% Currently this code is not working. I'm trying to contact the fisrt
-% author in [2] to clear some concepts. In the mean time, if anyone 
-% familiar with this implementation can spoot the problem, I'll be
-% eternally in debt with you ;) Happy coding!
+% Thanks to Kenny Lozes for pointing out that the THINC reconstruction, as
+% described in [2], cannot upwind by itself. It appears that this is not
+% well detailed by the authors. Therefore, such condition must be provided
+% for the scenario where (q(i+1)-q(i))*(q(i)-q(i-1)) < 0, takes place. 
+% See details in the code.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear; %close all; clc;
@@ -29,20 +30,23 @@ clear; %close all; clc;
 %% Parameters
    nx = 0200;	% number of cells
   CFL = 0.50;	% Courant Number
- tEnd = 0.40;   % End time
+ tEnd = 0.50;   % End time
 
-fluxfun='linear'; % select flux function
+fluxfun='buckley'; % select flux function
 % Define our Flux function
 switch fluxfun
     case 'linear'   % Scalar Advection, CFL_max: 0.65
         c=1; flux = @(w) c*w; 
         dflux = @(w) c*ones(size(w));
+        ICcase=1; tEnd=2.0;
     case 'burgers' % Burgers, CFL_max: 0.40  
         flux = @(w) w.^2/2; 
         dflux = @(w) w;
+        ICcase=2; CFL=0.4; IC=4; tEnd=1;
     case 'buckley' % Buckley-Leverett, CFL_max: 0.20 & tEnd: 0.40
         flux = @(w) 4*w.^2./(4*w.^2+(1-w).^2);
         dflux = @(w) 8*w.*(1-w)./(5*w.^2-2*w+1).^2;
+        ICcase=2; CFL=0.2; IC=9; tEnd=0.4;
 end
 
 sourcefun='dont'; % add source term
@@ -58,12 +62,12 @@ end
 a=-1; b=1; dx=(b-a)/nx; x=a+dx/2:dx:b; 
 
 % Build IC
-ICcase=2;  % {1}Testing, {2}Costum ICs
+%ICcase=2;  % overide for: {1}Testing, {2}Costum ICs
 switch ICcase
     case 1 % Testing IC
         u0=TestingIC(x);  % Jiang and Shu IC
     case 2 % Guassian IC
-        u0=CommonIC(x,4); % cases 1-10 <- check them out!
+        u0=CommonIC(x,IC); % cases 1-10 <- check them out!
     otherwise
         error('IC file not listed');
 end
@@ -107,6 +111,6 @@ end
 
 %% Final Plot
 plot(x,u0,'-x',x,u,'.'); axis(plotrange);
-title([Method,', cell averages plot'],'interpreter','latex','FontSize',18);
+title('Adaptative THINC-BVD, cell averages plot','interpreter','latex','FontSize',18);
 xlabel('$\it{x}$','interpreter','latex','FontSize',14);
 ylabel({'$\it{u(x)}$'},'interpreter','latex','FontSize',14);

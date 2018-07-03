@@ -48,13 +48,13 @@ clear; %close all; clc;
 global gamma
 
 %% Parameters
-CFL     = 0.65;	% CFL number
+CFL     = 0.50;	% CFL number
 tFinal	= 0.25;	% Final time
 nE      = 100;  % Number of cells/Elements
 n       = 5;	% Number of degrees of freedom in the gas
 IC      = 01;	% 10 IC cases are available
 method  = 2;    % 1:MUSCL, 2:MUSCL-THINC-BVD
-limiter ='MM';  % MC, MM, VA.
+limiter ='MC';  % MC, MM, VA.
 fluxMth ='HLLC'; % LF, ROE, RUS, AUSM, HLLE, HLLC.
 plot_fig= true;
 

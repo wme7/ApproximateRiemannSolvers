@@ -22,21 +22,27 @@ global gamma
     % Allocate arrays
     qim1=zeros(size(qi));   qip1=zeros(size(qi));
     TBV_s=zeros(size(qi));  TBV_l=zeros(size(qi));
+    wR=zeros(size(qi));     wL=zeros(size(qi));
     qR=zeros(size(qi));     qL=zeros(size(qi));
 
     % Constants parameters
-    Beta_s=1.1; Beta_l=2.0; epsilon=1E-20; delta=1E-4; J=2:N-1;
+    Beta_s=1.1; Beta_l=1.6; epsilon=1E-20; J=2:N-1;
+    
+    % compute primitive variables at solution points
+    wi(1,:) = qi(1,:);
+    wi(2,:) = qi(2,:)./qi(1,:);
+    wi(3,:) = (gamma-1)*( qi(3,:) - 0.5*qi(2,:).^2./qi(1,:));
 
     % Initial Arrays      
     % qi(:,J) = q(:, J );  % : q_{ j }^{n},
-    qim1(:,J) = qi(:,J-1); % : q_{j-1}^{n},
-    qip1(:,J) = qi(:,J+1); % : q_{j+1}^{n}.
+    qim1(:,J) = wi(:,J-1); % : q_{j-1}^{n},
+    qip1(:,J) = wi(:,J+1); % : q_{j+1}^{n}.
 
     % Coeficients
     qmin = min(cat(3,qim1,qip1),[],3);
     qmax = max(cat(3,qim1,qip1),[],3)-qmin;
     theta= sign(qip1-qim1); %theta(theta==0)=1;
-    C = (qi-qmin+epsilon)./(qmax+epsilon);
+    C = (wi-qmin+epsilon)./(qmax+epsilon);
     B = exp(Beta_s*theta.*(2*C-1));
     A = (B/cosh(Beta_s)-1)/tanh(Beta_s);
 
@@ -57,11 +63,21 @@ global gamma
     TBV_l(:,J) = abs(qiph_l(:,J-1)-qimh_l(:,J))+abs(qiph_l(:,J)-qimh_l(:,J+1));
 
     % Adaptative THINC-BVD reconstruction
-    condition= delta<C & C<(1-delta) & ((qip1-qi).*(qi-qim1))>0 & TBV_l<TBV_s;
-    %condition= ((qip1-qi).*(qi-qim1))>0 & TBV_l<TBV_s;
-    %condition= TBV_l<TBV_s;
-    qiph_s(condition)=qiph_l(condition); qL(:,J)=qiph_s(:,J);
-    qimh_s(condition)=qimh_l(condition); qR(:,J)=qimh_s(:,J+1);
+    condition= ((qip1-wi).*(wi-qim1))<0;
+    qiph_s(condition)=wi(condition);
+    qimh_s(condition)=wi(condition);
+    condition= TBV_l<TBV_s;
+    qiph_s(condition)=qiph_l(condition); wL(:,J)=qiph_s(:,J);
+    qimh_s(condition)=qimh_l(condition); wR(:,J)=qimh_s(:,J+1);
+    
+    % compute conservative variables at faces 
+    qR(1,:) = wR(1,:);
+    qR(2,:) = wR(2,:).*wR(1,:);
+    qR(3,:) = wR(3,:)./(gamma-1) + wR(1,:)/2.*(wR(2,:).^2);
+
+    qL(1,:) = wL(1,:);
+    qL(2,:) = wL(2,:).*wL(1,:);
+    qL(3,:) = wL(3,:)./(gamma-1) + wL(1,:)/2.*(wL(2,:).^2);
 
     % Allocate extra Arrays
     res=zeros(size(qi)); 

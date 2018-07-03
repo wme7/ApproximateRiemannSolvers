@@ -122,5 +122,5 @@ w2p = alpha2p./alphasump;
 hp = w0p.*p0p + w1p.*p1p + w2p.*p2p;
 
 %% Compute finite volume residual term, df/dx.
-LF = 0.5*(flux(hn)+flux(hp)-abs(dflux(qi)).*(hp-hn)); % Lax friedrichs flux
-res = (LF-circshift(LF,1))/dx - S(qi); % L = df(q)/dx + S(q).
+LF = 0.5*(flux(hn)+flux(hp)+abs(dflux(qi)).*(hp-hn)); % Lax friedrichs flux
+res = (LF-circshift(LF,1))/dx - S(qi); % L = - df(q)/dx + S(q).

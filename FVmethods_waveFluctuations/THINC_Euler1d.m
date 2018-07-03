@@ -64,7 +64,7 @@ a0 = sqrt(gamma*p0./r0);            % Speed of sound
 % Exact solution
 [xe,re,ue,pe,ee,te,Me,se] = ...
    EulerExact(r0(1),u0(1),p0(1),r0(nx),u0(nx),p0(nx),tEnd,n);
-Ee = pe./((gamma-1)*re)+0.5*ue.^2;
+Ee = pe/(gamma-1)+0.5*re.*ue.^2;
 
 % Set q-array & adjust grid for ghost cells
 nx=nx+2; q0=[r0; r0.*u0; E0]; zero=[0;0;0]; q0=[zero,q0,zero];
@@ -86,15 +86,15 @@ while t < tEnd
     qo = q;
     
     % 1st step
-    L=THINC_EulerRes1d(q,max(lambda(:)),dx,nx,fluxMth);     q=qo-dt*L; 
+    L=THINC_EulerRes1d_Fluctuations(q,dx,nx);     q=qo-dt*L; 
     q(:,1)=q(:,2); q(:,nx)=q(:,nx-1);   % Natural BCs
     
     % 2nd step 
-    L=THINC_EulerRes1d(q,max(lambda(:)),dx,nx,fluxMth);     q=0.75*qo+0.25*(q-dt*L);
+    L=THINC_EulerRes1d_Fluctuations(q,dx,nx);     q=0.75*qo+0.25*(q-dt*L);
     q(:,1)=q(:,2); q(:,nx)=q(:,nx-1);   % Natural BCs
     
     % 2nd step 
-    L=THINC_EulerRes1d(q,max(lambda(:)),dx,nx,fluxMth);     q=(qo+2*(q-dt*L))/3;
+    L=THINC_EulerRes1d_Fluctuations(q,dx,nx);     q=(qo+2*(q-dt*L))/3;
     q(:,1)=q(:,2); q(:,nx)=q(:,nx-1);   % Natural BCs
     
     % compute flow properties
@@ -122,7 +122,7 @@ cputime = toc;
 q=q(:,2:nx-1); nx=nx-2; 
 
 % compute flow properties
-r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2);
+r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2); e = p./((gamma-1)*r);
 
 % Plots results
 figure(1);
