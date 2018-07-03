@@ -32,7 +32,7 @@ clear; %close all; clc;
   CFL = 0.50;	% Courant Number
  tEnd = 0.50;   % End time
 
-fluxfun='buckley'; % select flux function
+fluxfun='linear'; % select flux function
 % Define our Flux function
 switch fluxfun
     case 'linear'   % Scalar Advection, CFL_max: 0.65

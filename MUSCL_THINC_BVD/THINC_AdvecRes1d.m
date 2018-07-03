@@ -35,6 +35,9 @@ TBV_s = abs(circshift(qiph_s,+1)-qimh_s)+abs(qiph_s-circshift(qimh_s,-1));
 TBV_l = abs(circshift(qiph_l,+1)-qimh_l)+abs(qiph_l-circshift(qimh_l,-1));
 
 %% 3. BVD Algorithm
+condition= ((qip1-qi).*(qi-qim1))<0;
+qiph_s(condition)=qi(condition);
+qimh_s(condition)=qi(condition);
 condition = TBV_l < TBV_s;
 qiph_s(condition)=qiph_l(condition); qL=circshift(qiph_s,0);
 qimh_s(condition)=qimh_l(condition); qR=circshift(qimh_s,-1);
@@ -44,5 +47,5 @@ qimh_s(condition)=qimh_l(condition); qR=circshift(qimh_s,-1);
 % qR=circshift(qimh_W,-1);
 
 %% Compute Lax-Friedrichs numerical flux and update solution
-LF = 0.5*(flux(qL)+flux(qR)-abs(dflux(qi)).*(qR-qL)); % Lax friedrichs flux
+LF = 0.5*(flux(qL)+flux(qR)-abs(dflux((qi+qip1)/2)).*(qR-qL)); % Lax friedrichs flux
 res = (LF-circshift(LF,1))/dx - S(qi); % L = df(q)/dx + S(q).
