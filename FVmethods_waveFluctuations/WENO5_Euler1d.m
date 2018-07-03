@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%      Solving 1-D Euler system of equations with Leveque's 2nd-order
-%        Finite Volume scheme based on wave fluctuations and MUSCL
+%        Solving 1-D Euler system of equations with WENO5 under a 
+%         Finite Volume (FV) using the wave fluctuations approach
 %
 %        dq_i/dt + df_i/dx = 0, for x \in [a,b] and i =1,. ..,D
 %
@@ -31,10 +31,9 @@
 %     SIAM Journal on Scientific Computing 35.1 (2013): A351-A377.  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % NOTE:
-% Although MUSCL is formally a second-order scheme, we use the 3rd-order
-% SSPRK scheme and the Wave fluctuation methodology in [2] so that the
-% method can be directly extended to any higher-order reconstruction
-% methodology like WENO or THINC.
+% This implementation follows the same finite-volume principles of [2],
+% and is equivalent to that of sharpclaw code, thus mastering these
+% principles, one doesn't need to depend on Clawpack anymore! 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear; %close all; clc;
@@ -79,19 +78,19 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    dF=WENO5_EulerRes1d_Fluctuations(q,dx);	q = qo-dt*dF; 
-    q(:,1)=qo(:,3); q(:, end )=qo(:,end-2);	% Neumann BCs
-    q(:,2)=qo(:,3); q(:,end-1)=qo(:,end-2);	% Neumann BCs
+    dF=WENO5_EulerRes1d_Fluctuations(q,dx,nx);	q = qo-dt*dF; 
+    %q(:,1)=qo(:,3); q(:, end )=qo(:,end-2);     % Neumann BCs
+    %q(:,2)=qo(:,3); q(:,end-1)=qo(:,end-2);     % Neumann BCs
     
     % 2nd Stage
-    dF=WENO5_EulerRes1d_Fluctuations(q,dx);	q = 0.75*qo+0.25*(q-dt*dF);
-    q(:,1)=qo(:,3); q(:, end )=qo(:,end-2);	% Neumann BCs
-    q(:,2)=qo(:,3); q(:,end-1)=qo(:,end-2);	% Neumann BCs
+    dF=WENO5_EulerRes1d_Fluctuations(q,dx,nx);	q = 0.75*qo+0.25*(q-dt*dF);
+    %q(:,1)=qo(:,3); q(:, end )=qo(:,end-2);     % Neumann BCs
+    %q(:,2)=qo(:,3); q(:,end-1)=qo(:,end-2);     % Neumann BCs
 
     % 3rd stage
-    dF=WENO5_EulerRes1d_Fluctuations(q,dx);	q = (qo+2*(q-dt*dF))/3;
-    q(:,1)=qo(:,3); q(:, end )=qo(:,end-2);	% Neumann BCs
-    q(:,2)=qo(:,3); q(:,end-1)=qo(:,end-2);	% Neumann BCs
+    dF=WENO5_EulerRes1d_Fluctuations(q,dx,nx);	q = (qo+2*(q-dt*dF))/3;
+    %q(:,1)=qo(:,3); q(:, end )=qo(:,end-2);     % Neumann BCs
+    %q(:,2)=qo(:,3); q(:,end-1)=qo(:,end-2);     % Neumann BCs
    
     % compute primary properties
     r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2);
@@ -121,7 +120,7 @@ r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2);
 % Calculation of flow parameters
 a = sqrt(gamma*p./r); M = u./a; % Mach number [-]
 p_ref = 101325;        	% Reference air pressure (N/m^2)
-r_ref= 1.225;          	% Reference air density (kg/m^3)
+r_ref = 1.225;          % Reference air density (kg/m^3)
 s_ref = 1/(gamma-1)*(log(p/p_ref)+gamma*log(r_ref./r)); 
                       	% Entropy w.r.t reference condition
 s = log(p./r.^gamma);	% Dimensionless Entropy

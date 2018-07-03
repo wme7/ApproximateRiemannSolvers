@@ -24,7 +24,7 @@ global gamma
 %% Parameters
 CFL     = 0.55;	% CFL number
 tFinal	= 0.20;	% Final time
-nx      = 100;  % Number of cells
+nx      = 200;  % Number of cells
 gamma   = 1.4;  % Ratio of specific heats for ideal di-atomic gas
 IC      = 01;	% 10 IC cases are available
 fluxMth ='HLLC';  % ROE, RUS, AUSM, HLLE, HLLC.
@@ -106,6 +106,6 @@ r=q(1,:); u=q(2,:)./r; E=q(3,:)./r; p=(gamma-1)*r.*(E-0.5*u.^2);
 figure(1);
 subplot(2,2,1); plot(xc,r,'ro',xe,re,'-k'); xlabel('x'); ylabel('\rho'); legend(['FV-WENO-',fluxMth],'Exact');
 title(['SSP-RK3 FV-WENO-',fluxMth,' Euler Eqns.'])
-subplot(2,2,2); plot(xc,u,'ro',xe,ue,'-k'); xlabel('x'); ylabel('u'); %legend(['FV-WENO-',fluxMth],'Exact');
-subplot(2,2,3); plot(xc,p,'ro',xe,pe,'-k'); xlabel('x'); ylabel('p'); %legend(['FV-WENO-',fluxMth],'Exact');
-subplot(2,2,4); plot(xc,E,'ro',xe,Ee,'-k'); xlabel('x'); ylabel('E'); %legend(['FV-WENO-',fluxMth],'Exact');
+subplot(2,2,2); plot(xc,u,'ro',xe,ue,'-k'); xlabel('x'); ylabel('u');
+subplot(2,2,3); plot(xc,p,'ro',xe,pe,'-k'); xlabel('x'); ylabel('p');
+subplot(2,2,4); plot(xc,E,'ro',xe,Ee,'-k'); xlabel('x'); ylabel('E');

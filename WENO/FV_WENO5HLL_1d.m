@@ -1,4 +1,4 @@
-function res = FV_WENO5HLL_1d(w,nx,dx,fluxMethod)
+function res = FV_WENO5HLL_1d(q,nx,dx,fluxMethod)
 % *************************************************************************
 % Input: u(i) = [u(i-2) u(i-1) u(i) u(i+1) u(i+2)];
 % Output: res = df/dx;
@@ -52,6 +52,11 @@ function res = FV_WENO5HLL_1d(w,nx,dx,fluxMethod)
 global gamma
 R=3; I=R:(nx-R); % R: stencil size
 
+%% Compute primitive variables at solution points
+w(1,:) = q(1,:);
+w(2,:) = q(2,:)./q(1,:);
+w(3,:) = (gamma-1)*( q(3,:) - 0.5*(q(2,:).^2)./q(1,:));
+
 %% Right State Extrapolation $u_{i+1/2}^{-}$
 vmm = w(:,I-2);
 vm  = w(:,I-1);
@@ -79,7 +84,7 @@ w1n = alpha1n./alphasumn;
 w2n = alpha2n./alphasumn;
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{-}$;
-qn  = w0n.*(2*vmm - 7*vm + 11*v)/6 ...
+wn  = w0n.*(2*vmm - 7*vm + 11*v)/6 ...
     + w1n.*( -vm  + 5*v  + 2*vp)/6 ...
     + w2n.*(2*v   + 5*vp - vpp )/6;
 
@@ -110,9 +115,18 @@ w1p = alpha1p./alphasump;
 w2p = alpha2p./alphasump;
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{+}$;
-qp  = w0p.*( -umm + 5*um + 2*u  )/6 ...
+wp  = w0p.*( -umm + 5*um + 2*u  )/6 ...
 	+ w1p.*( 2*um + 5*u  - up   )/6 ...
 	+ w2p.*(11*u  - 7*up + 2*upp)/6;
+
+%% Compute conservative variables at faces
+qn(1,:) = wn(1,:);
+qn(2,:) = wn(2,:).*wn(1,:);
+qn(3,:) = wn(3,:)./(gamma-1) + 0.5*wn(1,:).*wn(2,:).^2;
+
+qp(1,:) = wp(1,:);
+qp(2,:) = wp(2,:).*wp(1,:);
+qp(3,:) = wp(3,:)./(gamma-1) + 0.5*wp(1,:).*wp(2,:).^2;
 
 %% Compute finite volume residual term, df/dx.
 res=zeros(size(w)); flux=zeros(size(w));

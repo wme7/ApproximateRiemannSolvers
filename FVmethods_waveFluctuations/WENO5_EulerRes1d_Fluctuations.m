@@ -1,14 +1,13 @@
-function res = WENO5_EulerRes1d_Fluctuations(q,dx)
+function res = WENO5_EulerRes1d_Fluctuations(q,dx,N)
     % Commpute Euler residual using Leveque's Wave fluctuation methods
     
     % parameters
     global gamma
-    N = size(q,2);
     R=3; I=R:(N-R); % R: stencil size
 
     % Solution Arrays 
-    wL=zeros(3,N); 
-    wR=zeros(3,N);
+    wn=zeros(3,N); 
+    wp=zeros(3,N);
     res=zeros(3,N);
 
     % Compute primitive variables at solution points
@@ -16,7 +15,7 @@ function res = WENO5_EulerRes1d_Fluctuations(q,dx)
     w(2,:) = q(2,:)./q(1,:);
     w(3,:) = (gamma-1)*( q(3,:) - 0.5*(q(2,:).^2)./q(1,:));
 
-    %% Right State Extrapolation $u_{i+1/2}^{-}$
+    % Right State Extrapolation $u_{i+1/2}^{-}$
     vmm = w(:,I-2);
     vm  = w(:,I-1);
     v   = w(:, I );
@@ -43,16 +42,16 @@ function res = WENO5_EulerRes1d_Fluctuations(q,dx)
     w2n = alpha2n./alphasumn;
 
     % Numerical Flux at cell boundary, $u_{i+1/2}^{-}$;
-    wR(:,I) = w0n.*(2*vmm - 7*vm + 11*v)/6 ...
+    wn(:,I) = w0n.*(2*vmm - 7*vm + 11*v)/6 ...
         + w1n.*( -vm  + 5*v  + 2*vp)/6 ...
         + w2n.*(2*v   + 5*vp - vpp )/6;
 
-    %% Left State Extrapolation $u_{i+1/2}^{+}$ 
-    umm = w(:,I-1);
-    um  = w(:, I );
-    u   = w(:,I+1);
-    up  = w(:,I+2);
-    upp = w(:,I+3);
+    % Left State Extrapolation $u_{i+1/2}^{+}$ 
+    umm = w(:,I-2);
+    um  = w(:,I-1);
+    u   = w(:, I );
+    up  = w(:,I+1);
+    upp = w(:,I+2);
 
     % Smooth Indicators (Beta factors)
     B0p = 13/12*(umm-2*um+u  ).^2 + 1/4*(umm-4*um+3*u).^2; 
@@ -74,18 +73,33 @@ function res = WENO5_EulerRes1d_Fluctuations(q,dx)
     w2p = alpha2p./alphasump;
 
     % Numerical Flux at cell boundary, $u_{i+1/2}^{+}$;
-    wL(:,I+1) = w0p.*( -umm + 5*um + 2*u  )/6 ...
+    wp(:,I+1) = w0p.*( -umm + 5*um + 2*u  )/6 ...
         + w1p.*( 2*um + 5*u  - up   )/6 ...
         + w2p.*(11*u  - 7*up + 2*upp)/6;
     
+    % HACK! Apply boundary conditions in reconstructed arrays
+    wn(:,1) = w(:,3);
+    wn(:,2) = w(:,3);
+    wn(:,3) = w(:,3);
+    wn(:,N) = w(:,N-2);
+    wn(:,N-1)=w(:,N-2);
+    wn(:,N-2)=w(:,N-2);
+    
+    wp(:,1) = w(:,3);
+    wp(:,2) = w(:,3);
+    wp(:,3) = w(:,3);
+    wp(:,N) = w(:,N-2);
+    wp(:,N-1)=w(:,N-2);
+    wp(:,N-2)=w(:,N-2);
+    
     % Compute conservative variables at faces
-    qR(1,:) = wR(1,:);
-    qR(2,:) = wR(2,:).*wR(1,:);
-    qR(3,:) = wR(3,:)./(gamma-1) + 0.5*wR(1,:).*wR(2,:).^2;
+    qR(1,:) = wn(1,:);
+    qR(2,:) = wn(2,:).*wn(1,:);
+    qR(3,:) = wn(3,:)./(gamma-1) + 0.5*wn(1,:).*wn(2,:).^2;
 
-    qL(1,:) = wL(1,:);
-    qL(2,:) = wL(2,:).*wL(1,:);
-    qL(3,:) = wL(3,:)./(gamma-1) + 0.5*wL(1,:).*wL(2,:).^2;
+    qL(1,:) = wp(1,:);
+    qL(2,:) = wp(2,:).*wp(1,:);
+    qL(3,:) = wp(3,:)./(gamma-1) + 0.5*wp(1,:).*wp(2,:).^2;
 
     % loop over cells, compute residual with wave propagation method
     for j = 3:N-2
