@@ -22,6 +22,12 @@ Completed 1D solvers list:
 * WENO-Roe FV-solver
 * WENO-Einfeldt HLL (HLLE) FV-solver
 * WENO-HLL Contact (HLLC) FV-solver
+* THINC-BVD-Lax Friedrichs FV-solver
+* THINC-BVD-ROE FV-solver
+* THINC-BVD-Rusanov (Rus) FV-solver
+* THINC-BVD-AUSM FV-solver
+* THINC-BVD-Einfeldt HLL (HLLE) FV-solver
+* THINC-BVD-HLL Contact (HLLC) FV-solver
 
 Completed 2D solvers list:
 * MUSCL-Lax Friedrichs FV-solver [by tensor product]
