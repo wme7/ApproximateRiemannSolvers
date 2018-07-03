@@ -30,10 +30,9 @@
 %     "High-order wave propagation algorithms for hyperbolic systems."
 %     SIAM Journal on Scientific Computing 35.1 (2013): A351-A377.  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% NOTE:
+% NOTE: (NOT completed!)
 % This implementation follows the same finite-volume principles of [2],
-% and is equivalent to that of sharpclaw code, thus mastering these
-% principles, one doesn't need to depend on Clawpack anymore! 
+% and is equivalent to that of sharpclaw package in Clawpack [1] solver. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear; %close all; clc;
