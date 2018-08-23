@@ -38,14 +38,25 @@
 % for the scenario where (q(i+1)-q(i))*(q(i)-q(i-1)) < 0, takes place. 
 % See details in the code.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-clear; %clc; close all;
+clear; clc; close all;
 global gamma
+
+% Plot defaults
+set(0,'defaultTextInterpreter','latex')
+set(0,'DefaultTextFontName','Times',...
+'DefaultTextFontSize',20,...
+'DefaultAxesFontName','Times',...
+'DefaultAxesFontSize',20,...
+'DefaultLineLineWidth',2.0,...
+'DefaultAxesBox','on',...
+'defaultAxesLineWidth',2.0,...
+'DefaultFigureColor','w',...
+'DefaultLineMarkerSize',6)
 
 %% Parameters
 cfl     = 0.50;	% CFL number
 tEnd    = 0.15;	% Final time
-nx      = 200;  % Number of cells/Elements
+nx      = 160;  % Number of cells/Elements
 n       = 5;	% Number of degrees of freedom in the gas
 IC      = 01;	% ~12 Initial value problems are available
 fluxMth ='HLLC'; % LF, ROE, RUS, AUSM, HLLE, HLLC.
@@ -125,10 +136,24 @@ q=q(:,2:nx-1); nx=nx-2;
 % compute flow properties
 r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2); e = p./((gamma-1)*r);
 
-% Plots results
+%% Plots results
 figure(1);
 subplot(2,2,1); plot(xc,r,'ro',xe,re,'-k'); xlabel('x'); ylabel('\rho'); legend(['THINC-',fluxMth],'Exact'); 
 title('SSP-RK3 THINC Euler Eqns.')
 subplot(2,2,2); plot(xc,u,'ro',xe,ue,'-k'); xlabel('x'); ylabel('u');
 subplot(2,2,3); plot(xc,p,'ro',xe,pe,'-k'); xlabel('x'); ylabel('p');
 subplot(2,2,4); plot(xc,e,'ro',xe,ee,'-k'); xlabel('x'); ylabel('E');
+
+
+%% Formal plot
+figure(2);
+plot(xc,r,'ro',xe,re,'-k'); 
+xlabel('$x$','interpreter','latex','FontSize',18); 
+ylabel('$\varrho(x)$','interpreter','latex','FontSize',18); 
+legend(['RK3-THINC-',fluxMth],'Exact Euler solution.'); 
+title('Cell averages.')
+
+fig = gcf;
+fig.PaperUnits = 'inches';
+fig.PaperPosition = [0 0 8 5];
+print('-depsc','THINCmethods_EulerTest.eps');
