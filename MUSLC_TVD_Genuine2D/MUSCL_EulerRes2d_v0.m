@@ -1,9 +1,8 @@
 function [res] = MUSCL_EulerRes2d_v0(q,gamma,~,dx,dy,N,M,limiter,fluxMethod,~)
-%   MUSCL Monotonic Upstreat Centered Scheme for Conservation Laws
-%   Van Leer's MUSCL reconstruction scheme using piece wise linear
-%   reconstruction
+%   A genuine 2d HLLE Riemnan solver for Euler Equations using a Monotonic
+%   Upstreat Centered Scheme for Conservation Laws (MUSCL).
 %  
-%   e.g. where: limiter='MC'; fluxMethod='AUSM';
+%   e.g. where: limiter='MC'; fluxMethod='HLLE1d';
 %
 %   Flux at j+1/2
 % 
@@ -20,7 +19,7 @@ function [res] = MUSCL_EulerRes2d_v0(q,gamma,~,dx,dy,N,M,limiter,fluxMethod,~)
 %   F = cat(3, r.*u, r.*u.^2+p, r.*u.*v, u.*(r.*E+p));
 %   G = cat(3, r.*v, r.*u.*v, r.*v.^2+p, v.*(r.*E+p));
 %
-% Written by Manuel Diaz, NTU, 04.29.2015.
+% Written by Manuel Diaz, NTU, 05.25.2015.
     res = zeros(M,N,4);
 
     % Normal unitary face vectors: (nx,ny)

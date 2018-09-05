@@ -1,6 +1,19 @@
 function [res] = MUSCL_EulerRes2d_v1(q,gamma,dt,dx,dy,N,M,limiter,fluxMethod,assembly)
-%   A genuine 2d HLLE Riemnan solver for Euler Equations.
-%   Following details in ref [1].:
+%   A genuine 2d HLLE Riemnan solver for Euler Equations using a Monotonic
+%   Upstreat Centered Scheme for Conservation Laws (MUSCL).
+%  
+%   e.g. where: limiter='MC'; fluxMethod='HLLE1d';
+%
+%   Flux at j+1/2
+% 
+%     j+1/2         Cell's grid:
+%   | wL|   |
+%   |  /|wR |           1   2   3   4        N-2 N-1  N
+%   | / |\  |   {x=0} |-o-|-o-|-o-|-o-| ... |-o-|-o-|-o-| {x=L}
+%   |/  | \ |         1   2   3   4   5        N-1  N  N+1
+%   |   |  \|
+%   |   |   |       NC: Here cells 1 and N are ghost cells
+%     j  j+1            faces 2 and N, are the real boundary faces.
 %
 %   q = cat(3, r, r.*u, r.*v, r.*E);
 %   F = cat(3, r.*u, r.*u.^2+p, r.*u.*v, u.*(r.*E+p));
