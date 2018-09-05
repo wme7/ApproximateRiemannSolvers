@@ -28,7 +28,8 @@
 %
 % coded by Manuel Diaz, 2015.05.10
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-clear; close all; clc;
+clear; close all; clc; 
+global gamma
 
 %% Parameters
 CFL     = 0.50;     % CFL number;
@@ -90,13 +91,13 @@ tic
 while t < tEnd
     
     % RK2 1st step
-    qs = q - dt*MUSCL_EulerRes2d(q,gamma,dt,dx,dy,nx,ny,limiter,fluxMth);
+    qs = q - dt*MUSCL_EulerRes2d(q,dt,dx,dy,nx,ny,limiter,fluxMth);
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
     
     % RK2 2nd step / update q
-    q = 0.5*(q + qs - dt*MUSCL_EulerRes2d(qs,gamma,dt,dx,dy,nx,ny,limiter,fluxMth));
+    q = 0.5*(q + qs - dt*MUSCL_EulerRes2d(qs,dt,dx,dy,nx,ny,limiter,fluxMth));
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs

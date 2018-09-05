@@ -1,4 +1,4 @@
-function [res] = MUSCL_EulerRes2d_v2(q,gamma,dt,dx,dy,N,M,limiter,fluxMethod)
+function [res] = MUSCL_EulerRes2d_v2(q,dt,dx,dy,N,M,limiter,fluxMethod)
 %   A genuine 2d HLLE Riemnan solver for Euler Equations using a Monotonic
 %   Upstreat Centered Scheme for Conservation Laws (MUSCL).
 %  
