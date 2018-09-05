@@ -25,19 +25,18 @@
 %
 % coded by Manuel Diaz, 2015.05.10
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%clear; close all; clc;
+clear; close all; clc;
 
 %% Parameters
-CFL     = 0.50;     % CFL number
-tEnd    = 0.25;     % Final time
-nx      = 100;      % Number of cells/Elements in x
-ny      = 100;      % Number of cells/Elements in y
-n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
-IC      = 05;       % 19 IC cases are available
-limiter ='MC';      % MM, MC, VA.
-fluxMth ='HLLC';	% LF, RUS, ROE, HLLE, HLLC.
-plot_fig= 1;        % 1:visualize evolution 
+CFL     = 0.50;     % CFL number;
+tEnd    = 0.25;     % Final time;
+nx      = 100;      % Number of cells/Elements in x;
+ny      = 100;      % Number of cells/Elements in y;
+n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3;
+IC      = 05;       % 19 IC cases are available;
+fluxMth ='HLLC';	% LF, RUS, ROE, HLLE, HLLC;
+limiter ='MC';      % MM, MC, VA, VL;
+plot_fig= 1;        % 1:visualize evolution;
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -49,6 +48,7 @@ Ly=1; dy=Ly/ny; yc=dy/2:dy:Ly;
 
 % Set IC
 [r0,u0,v0,p0] = Euler_IC2d(x,y,IC);
+%[r0,u0,v0,p0] = Continuum_IC2d(x,y);
 E0 = p0./((gamma-1)*r0)+0.5*(u0.^2+v0.^2);  % Total Energy
 c0 = sqrt(gamma*p0./r0);                    % Speed of sound
 Q0 = cat(3, r0, r0.*u0, r0.*v0, r0.*E0);    % initial state
@@ -67,12 +67,13 @@ dt0=CFL*min(dx./a0,dy./a0);
 
 % Initialize parpool
 poolobj = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(poolobj); parpool('local',4); end
+if isempty(poolobj); parpool('local',2); end
+
+%% Solver Loop
 
 % Load IC
 q=q0; t=dt0; it=0; dt=dt0; a=a0;
 
-% Solver Loop
 tic
 while t < tEnd
     

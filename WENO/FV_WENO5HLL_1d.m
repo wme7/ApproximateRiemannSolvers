@@ -296,7 +296,7 @@ function AUSM = AUSMflux(qL,qR,gamma)
     HR = ( qR(3) + pR )./ rR;
 
     % Positive M and p in the LEFT cell.
-    if (ML <= -1);
+    if (ML <= -1)
         Mp = 0;
         Pp = 0;
     elseif (ML < 1)
@@ -433,8 +433,8 @@ function HLLC = HLLCflux(qL,qR,gamma)
       end
 
     % Estimate wave speeds: SL, SR and SM (Toro, 1994)
-    if pM>pL; zL=sqrt(1+(gamma+1)/(2*gamma)*(pM/pL-1)); else zL=1; end    
-    if pM>pR; zR=sqrt(1+(gamma+1)/(2*gamma)*(pM/pR-1)); else zR=1; end
+    if pM>pL; zL=sqrt(1+(gamma+1)/(2*gamma)*(pM/pL-1)); else, zL=1; end    
+    if pM>pR; zR=sqrt(1+(gamma+1)/(2*gamma)*(pM/pR-1)); else, zR=1; end
   
 	SL = uL - aL*zL;
     SR = uR + aR*zR;
