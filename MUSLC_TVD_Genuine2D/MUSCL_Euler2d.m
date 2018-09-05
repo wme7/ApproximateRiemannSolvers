@@ -38,7 +38,7 @@ ny      = 100;      % Number of cells/Elements in y;
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available;
 fluxMth ='HLLE1d';  % HLLE1d, HLLE2d;
-assmble ='simpson';	% 'manual' or 'simpson';
+assmble ='none';	% 'none', 'manual' or 'simpson';
 limiter ='MC';      % MM, MC, VA, VL;
 plot_fig= 1;        % 1:visualize evolution;
 
@@ -73,6 +73,14 @@ dt0=CFL*min(dx./a0,dy./a0);
 poolobj = gcp('nocreate'); % If no pool, do not create new one.
 if isempty(poolobj); parpool('local',2); end
 
+% Run scheme
+switch assmble
+    case 'none', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v0; % Do HLLE1d Dim by Dim
+    case 'manual', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v1; % Manual assembly (working on it)
+    case 'simpson', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v2; % Use Simpsons rule (working on it)
+    otherwise, error('flux assamble not available');
+end
+
 %% Solver Loop
 
 % Load IC
@@ -82,13 +90,13 @@ tic
 while t < tEnd
     
     % RK2 1st step
-    qs = q - dt*MUSCL_EulerRes2d(q,gamma,dt,dx,dy,nx,ny,limiter,fluxMth,assmble);
+    qs = q - dt*MUSCL_EulerRes2d(q,gamma,dt,dx,dy,nx,ny,limiter,fluxMth);
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
     
     % RK2 2nd step / update q
-    q = 0.5*(q + qs - dt*MUSCL_EulerRes2d(qs,gamma,dt,dx,dy,nx,ny,limiter,fluxMth,assmble));
+    q = 0.5*(q + qs - dt*MUSCL_EulerRes2d(qs,gamma,dt,dx,dy,nx,ny,limiter,fluxMth));
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
@@ -137,11 +145,10 @@ e = p./((gamma-1)*r);   % internal Energy
 
 %% Final plot
 figure(2); offset=0.05; n=22; % contour lines
-% surf(x,y,r);
 s1=subplot(2,3,1); contour(x,y,r,n); axis('square'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
 s2=subplot(2,3,2); contour(x,y,U,n); axis('square'); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
 s3=subplot(2,3,3); contour(x,y,p,n); axis('square'); xlabel('x(m)'); ylabel('Pressure (Pa)');
 s4=subplot(2,3,4); contour(x,y,ss,n);axis('square'); xlabel('x(m)'); ylabel('Entropy/R gas');
 s5=subplot(2,3,5); contour(x,y,M,n); axis('square'); xlabel('x(m)'); ylabel('Mach number');
 s6=subplot(2,3,6); contour(x,y,e,n); axis('square'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,'MUSCL Euler 2-D Solver');
+title(s1,'MUSCL with genuinely 2D HLL fluxes');
