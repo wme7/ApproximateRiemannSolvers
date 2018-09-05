@@ -28,19 +28,19 @@
 %
 % coded by Manuel Diaz, 2015.05.10
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-clear; %clc; close all;
+clear; close all; clc;
 
 %% Parameters
-CFL     = 0.90;     % CFL number
-tEnd    = 0.30;     % Final time
-nx      = 100;      % Number of cells/Elements in x
-ny      = 100;      % Number of cells/Elements in y
-n       = 5;        % Number of degrees of freedom
-assmbl  ='simpson';	% 'manual' or 'simpson'
-IC      = 05;       % 19 IC cases are available
-limiter ='MC';      % MM, MC, VA, VL.
-plot_fig= 1;        % 1:visualize evolution 
+CFL     = 0.50;     % CFL number;
+tEnd    = 0.25;     % Final time;
+nx      = 100;      % Number of cells/Elements in x;
+ny      = 100;      % Number of cells/Elements in y;
+n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
+IC      = 05;       % 19 IC cases are available;
+fluxMth ='HLLE1d';  % HLLE1d, HLLE2d;
+assmble ='simpson';	% 'manual' or 'simpson';
+limiter ='MC';      % MM, MC, VA, VL;
+plot_fig= 1;        % 1:visualize evolution;
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -73,21 +73,22 @@ dt0=CFL*min(dx./a0,dy./a0);
 poolobj = gcp('nocreate'); % If no pool, do not create new one.
 if isempty(poolobj); parpool('local',2); end
 
+%% Solver Loop
+
 % Load IC
 q=q0; t=0; it=0; dt=dt0; a=a0;
 
-% Solver Loop
 tic
 while t < tEnd
     
     % RK2 1st step
-    qs = q - dt*MUSCL2d_EulerRes2d_v2(q,gamma,dt,dx,dy,nx,ny,limiter,assmbl);
+    qs = q - dt*MUSCL_EulerRes2d(q,gamma,dt,dx,dy,nx,ny,limiter,fluxMth,assmble);
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
     
     % RK2 2nd step / update q
-    q = 0.5*(q + qs - dt*MUSCL2d_EulerRes2d_v2(qs,gamma,dt,dx,dy,nx,ny,limiter,assmbl));
+    q = 0.5*(q + qs - dt*MUSCL_EulerRes2d(qs,gamma,dt,dx,dy,nx,ny,limiter,fluxMth,assmble));
     
     q(:,1,:)=q(:,2,:); q(:,nx,:)=q(:,nx-1,:);   % Natural BCs
     q(1,:,:)=q(2,:,:); q(ny,:,:)=q(ny-1,:,:);   % Natural BCs
