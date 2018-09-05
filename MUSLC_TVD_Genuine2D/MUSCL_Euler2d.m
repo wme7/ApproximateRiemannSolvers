@@ -33,7 +33,7 @@ global gamma
 
 %% Parameters
 CFL     = 0.50;     % CFL number;
-tEnd    = 0.25;     % Final time;
+tEnd    = 0.05;     % Final time;
 nx      = 100;      % Number of cells/Elements in x;
 ny      = 100;      % Number of cells/Elements in y;
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
@@ -41,7 +41,7 @@ IC      = 05;       % 19 IC cases are available;
 fluxMth ='HLLE1d';  % HLLE1d, HLLE2d;
 assmble ='none';	% 'none', 'manual' or 'simpson';
 limiter ='MC';      % MM, MC, VA, VL;
-plot_fig= 1;        % 1:visualize evolution;
+plotFig = true;     % true:visualize evolution;
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -82,6 +82,16 @@ switch assmble
     otherwise, error('flux assamble not available');
 end
 
+% Configure figure 
+in=2:ny-1; jn=2:nx-1; % internal indexes
+if plotFig
+    figure(1);
+    subplot(2,2,1); [~,h1]=contourf(x,y,r0); axis('square'); xlabel('x'); ylabel('y'); title('\rho');
+    subplot(2,2,2); [~,h2]=contourf(x,y,u0); axis('square'); xlabel('x'); ylabel('y'); title('u_x');
+    subplot(2,2,3); [~,h3]=contourf(x,y,v0); axis('square'); xlabel('x'); ylabel('y'); title('u_y');
+    subplot(2,2,4); [~,h4]=contourf(x,y,p0); axis('square'); xlabel('x'); ylabel('y'); title('p');
+end
+
 %% Solver Loop
 
 % Load IC
@@ -113,21 +123,18 @@ while t < tEnd
 	t=t+dt; it=it+1;
     
     % Plot figure
-    if rem(it,1) == 0
-        if plot_fig == 1
-            surf(r)
-            subplot(2,2,1); contourf(x,y,r(2:ny-1,2:nx-1)); axis('square');
-            subplot(2,2,2); contourf(x,y,u(2:ny-1,2:nx-1)); axis('square');
-            subplot(2,2,3); contourf(x,y,v(2:ny-1,2:nx-1)); axis('square');
-            subplot(2,2,4); contourf(x,y,p(2:ny-1,2:nx-1)); axis('square');
-            drawnow
-        end
+    if plotFig && rem(it,2) == 0
+        set(h1,'ZData',r(in,jn));
+        set(h2,'ZData',u(in,jn));
+        set(h3,'ZData',v(in,jn));
+        set(h4,'ZData',p(in,jn));
+        drawnow
     end
 end
 cputime = toc;
 
 % Remove ghost cells
-q=q(2:ny-1,2:nx-1,1:4); nx=nx-2; ny=ny-2; 
+q=q(in,jn,1:4); nx=nx-2; ny=ny-2; 
 
 % compute flow properties
 r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r; p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2));
@@ -136,8 +143,8 @@ r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r; p=(gamma-1)*r.*(E-0.5*(
 c = sqrt(gamma*p./r);   % Speed of sound
 Mx = u./c; My = v./c; U = sqrt(u.^2+v.^2); M = U./c;
 p_ref = 101325;         % Reference air pressure (N/m^2)
-rho_ref= 1.225;         % Reference air density (kg/m^3)
-s = 1/(gamma-1)*(log(p/p_ref)+gamma*log(rho_ref./r)); 
+r_ref= 1.225;           % Reference air density (kg/m^3)
+s = 1/(gamma-1)*(log(p/p_ref)+gamma*log(r_ref./r)); 
                         % Entropy w.r.t reference condition
 ss = log(p./r.^gamma);  % Dimensionless Entropy
 r_x = r.*u;             % Mass Flow rate per unit area

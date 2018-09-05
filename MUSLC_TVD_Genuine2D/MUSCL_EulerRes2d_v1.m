@@ -10,10 +10,10 @@ function [res] = MUSCL_EulerRes2d_v1(q,dt,dx,dy,N,M,limiter,fluxMethod)
 %   | wL|   |
 %   |  /|wR |           1   2   3   4        N-2 N-1  N
 %   | / |\  |   {x=0} |-o-|-o-|-o-|-o-| ... |-o-|-o-|-o-| {x=L}
-%   |/  | \ |         1   2   3   4   5        N-1  N  N+1
+%   |/  | \ |             1   2   3   4        N-2 N-1  
 %   |   |  \|
 %   |   |   |       NC: Here cells 1 and N are ghost cells
-%     j  j+1            faces 2 and N, are the real boundary faces.
+%     j  j+1            faces 1 and N-1, are the real boundary faces.
 %
 %   q = cat(3, r, r.*u, r.*v, r.*E);
 %   F = cat(3, r.*u, r.*u.^2+p, r.*u.*v, u.*(r.*E+p));
@@ -23,16 +23,18 @@ function [res] = MUSCL_EulerRes2d_v1(q,dt,dx,dy,N,M,limiter,fluxMethod)
     res = zeros(M,N,4);
 
     % Normal unitary face vectors: (nx,ny)
-    %normals = {[0,1], [1,0], [0,-1], [-1,0]}; % i.e.: [N, E, S, W] 
-    
+    % normals = {[0,1], [1,0], [0,-1], [-1,0]}; % i.e.: [N, E, S, W] 
+
     % Build cells
-    C(M,N).q = zeros(4,1);
+    cell(M,N).all = M*N;
     for i = 1:M
         for j = 1:N
-            C(i,j).q = [q(i,j,1);q(i,j,2);q(i,j,3);q(i,j,4)];
-            C(i,j).dqdy = zeros(4,1);
-            C(i,j).dqdx = zeros(4,1);
-            C(i,j).res = zeros(4,1);
+            cell(i,j).q = [q(i,j,1);q(i,j,2);q(i,j,3);q(i,j,4)];
+            cell(i,j).qN = zeros(4,1);
+            cell(i,j).qS = zeros(4,1);
+            cell(i,j).qE = zeros(4,1);
+            cell(i,j).qW = zeros(4,1);
+            cell(i,j).res = zeros(4,1);
         end
     end
 
@@ -40,30 +42,34 @@ function [res] = MUSCL_EulerRes2d_v1(q,dt,dx,dy,N,M,limiter,fluxMethod)
     for i = 2:M-1       % only internal cells
         for j = 2:N-1   % only internal cells
             for k = 1:4
-                dqw = 2*(C( i,j ).q(k) - C(i,j-1).q(k))/dx; % du btn j and j-1
-                dqe = 2*(C(i,j+1).q(k) - C( i,j ).q(k))/dx; % du btn j+1 and j
-                dqs = 2*(C( i,j ).q(k) - C(i-1,j).q(k))/dy; % du btn i and i-1
-                dqn = 2*(C(i+1,j).q(k) - C( i,j ).q(k))/dy; % du btn i+1 and i
+                dqw = (cell( i,j ).q(k) - cell(i,j-1).q(k)); % du btn j and j-1
+                dqe = (cell(i,j+1).q(k) - cell( i,j ).q(k)); % du btn j+1 and j
+                dqs = (cell( i,j ).q(k) - cell(i-1,j).q(k)); % du btn i and i-1
+                dqn = (cell(i+1,j).q(k) - cell( i,j ).q(k)); % du btn i+1 and i
                 switch limiter
                     case 'MC' % MC limiter
                         % Find dq_j = minmod{fwd diff, bwd diff, cntrl diff}
-                        dqc = (C(i,j+1).q(k)-C(i,j-1).q(k))/(2*dx); % du btn j+1 and j-1
-                        C(i,j).dqdx(k) = minmod([dqw,dqe,dqc]);
-                        dqc = (C(i+1,j).q(k)-C(i-1,j).q(k))/(2*dy); % du btn j+1 and j-1
-                        C(i,j).dqdy(k) = minmod([dqs,dqn,dqc]);
+                        dqc = (cell(i,j+1).q(k)-cell(i,j-1).q(k))/2; % du btn j+1 and j-1
+                        dqdx = minmod([2*dqw,2*dqe,dqc]);
+                        dqc = (cell(i+1,j).q(k)-cell(i-1,j).q(k))/2; % du btn j+1 and j-1
+                        dqdy = minmod([2*dqs,2*dqn,dqc]);
                     case 'MM' % Minmod limiter
                         % Find dq_j = minmod{fwd diff, bwd diff}
-                        C(i,j).dqdx(k) = minmod([dqw,dqe]);
-                        C(i,j).dqdy(k) = minmod([dqs,dqn]);
+                        dqdx = minmod([dqw,dqe]);
+                        dqdy = minmod([dqs,dqn]);
                     case 'VA' % Van Albada limiter
-                        % Find dq_j = vanAlvada{fwd diff, bwd diff, h }
-                        C(i,j).dqdx(k) = vanalbada(dqw,dqe,dx);
-                        C(i,j).dqdy(k) = vanalbada(dqs,dqn,dy);
+                        % Find dq_j = minmod{fwd diff, bwd diff}
+                        dqdx = vanalbada(dqw,dqe,dx);
+                        dqdy = vanalbada(dqs,dqn,dy);
                     case 'VL' % Van Leer limiter
                         % Find dq_j = vanAlvada{fwd diff, bwd diff, h }
-                        C(i,j).dqdx(k) = vanLeer(dqw,dqe);
-                        C(i,j).dqdy(k) = vanLeer(dqs,dqn);
+                        dqdx = vanLeer(dqw,dqe);
+                        dqdy = vanLeer(dqs,dqn);
                 end
+                cell(i,j).qE(k) = cell(i,j).q(k) + dqdx/2; % q_{i,j+1/2}^{-} from (i,j)
+                cell(i,j).qW(k) = cell(i,j).q(k) - dqdx/2; % q_{i,j-1/2}^{+} from (i,j)
+                cell(i,j).qN(k) = cell(i,j).q(k) + dqdy/2; % q_{i+1/2,j}^{-} from (i,j)
+                cell(i,j).qS(k) = cell(i,j).q(k) - dqdy/2; % q_{i-1/2,j}^{+} from (i,j)
             end
         end
     end

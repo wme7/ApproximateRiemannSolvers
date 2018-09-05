@@ -78,38 +78,32 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
     % Residuals %
     %%%%%%%%%%%%%
     
-    % Compute residuals x-direction
-    for i = 2:M-1
+    % Compute fluxes across all internal faces
+    for i = 2:M-2
         for j = 2:N-2
             % Left (inside) and Right (outside) extrapolated q-values at the boundaries
             qxL = [cell( i,j ).qE]; % q_{i,j+1/2}^{-}
             qxR = [cell(i,j+1).qW]; % q_{i,j+1/2}^{+}
-            % compute flux at j+1/2 using
-            switch fluxMethod
-                case 'HLLE1d', flux = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
-                case 'HLLE2d', flux = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
-                otherwise, error('flux option not available');
-            end
-            % contributions to the residual of cell (i,j) and cells around it
-            cell( i,j ).res = cell( i,j ).res + flux/dx;
-            cell(i,j+1).res = cell(i,j+1).res - flux/dx;
-        end
-    end
-    
-    % Compute residuals y-direction
-    for i = 2:M-2
-        for j = 2:N-1
-            % Left (inside) and Right (outside) extrapolated q-values at the boundaries
             qyL = [cell( i,j ).qN]; % q_{i+1/2,j}^{-}
             qyR = [cell(i+1,j).qS]; % q_{i+1/2,j}^{+}
             % compute flux at j+1/2 using
             switch fluxMethod
-                case 'HLLE1d', flux = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
-                case 'HLLE2d', flux = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
+                case 'HLLE1d' % Dim by Dim
+                    flux_x = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
+                    flux_y = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
+                case 'HLLE2d' % Genuine 2D
+                    HLLE_x = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
+                    HLLE_y = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
+                    HLLE_c = HLLE2dflux(qxL,qxR,qyL,qyR); % F_{i+1/2,j+1/2}
+                    flux_x = ;
+                    flux_y = ;
+                otherwise, error('flux option not available');
             end
             % contributions to the residual of cell (i,j) and cells around it
-            cell( i,j ).res = cell( i,j ).res + flux/dy;
-            cell(i+1,j).res = cell(i+1,j).res - flux/dy;
+            cell( i,j ).res = cell( i,j ).res + flux_x/dx;
+            cell(i,j+1).res = cell(i,j+1).res - flux_x/dx;
+            cell( i,j ).res = cell( i,j ).res + flux_y/dy;
+            cell(i+1,j).res = cell(i+1,j).res - flux_y/dy;
         end
     end
     
@@ -118,7 +112,7 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
     %%%%%%%%%%%
     
     % Flux contribution of the MOST NORTH FACE: north face of cells j=M-1.
-    for j = 2:N-1
+    for j = 2:N-2
         qR = cell(M-1,j).qS;     qL = qR;
         switch fluxMethod
             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[0,1]); % F_{i+1/2,j}
@@ -128,7 +122,7 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
     end
     
     % Flux contribution of the MOST EAST FACE: east face of cell j=N-1.
-    for i = 2:M-1
+    for i = 2:M-2
         qR = cell(i,N-1).qW;     qL = qR;
         switch fluxMethod
             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[1,0]); % F_{i,j+1/2}
@@ -138,7 +132,7 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
     end
     
     % Flux contribution of the MOST SOUTH FACE: south face of cells j=2.
-    for j = 2:N-1
+    for j = 2:N-2
         qR = cell(2,j).qN;     qL = qR;
         switch fluxMethod
             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[0,-1]); % F_{i-1/2,j}
@@ -148,7 +142,7 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
     end
     
     % Flux contribution of the MOST WEST FACE: west face of cells j=2.
-    for i = 2:M-1
+    for i = 2:M-2
         qR = cell(i,2).qE;     qL = qR;
         switch fluxMethod
             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[-1,0]); % F_{i,j-1/2}

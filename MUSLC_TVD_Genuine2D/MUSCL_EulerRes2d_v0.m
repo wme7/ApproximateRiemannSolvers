@@ -79,15 +79,14 @@ function [res] = MUSCL_EulerRes2d_v0(q,~,dx,dy,N,M,limiter,fluxMethod)
     %%%%%%%%%%%%%
     
     % Compute residuals x-direction
-    for i = 2:M-1
-        for j = 2:N-2
+    for i = 2:M-1     % internal cells
+        for j = 2:N-2 % internal faces
             % Left (inside) and Right (outside) extrapolated q-values at the boundaries
             qxL = [cell( i,j ).qE]; % q_{i,j+1/2}^{-}
             qxR = [cell(i,j+1).qW]; % q_{i,j+1/2}^{+}
             % compute flux at j+1/2 using
             switch fluxMethod
                 case 'HLLE1d', flux = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
-                case 'HLLE2d', flux = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
                 otherwise, error('flux option not available');
             end
             % contributions to the residual of cell (i,j) and cells around it
@@ -97,15 +96,14 @@ function [res] = MUSCL_EulerRes2d_v0(q,~,dx,dy,N,M,limiter,fluxMethod)
     end
     
     % Compute residuals y-direction
-    for i = 2:M-2
-        for j = 2:N-1
+    for i = 2:M-2     % internal faces
+        for j = 2:N-1 % internal cells
             % Left (inside) and Right (outside) extrapolated q-values at the boundaries
             qyL = [cell( i,j ).qN]; % q_{i+1/2,j}^{-}
             qyR = [cell(i+1,j).qS]; % q_{i+1/2,j}^{+}
             % compute flux at j+1/2 using
             switch fluxMethod
                 case 'HLLE1d', flux = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
-                case 'HLLE2d', flux = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
             end
             % contributions to the residual of cell (i,j) and cells around it
             cell( i,j ).res = cell( i,j ).res + flux/dy;
@@ -122,7 +120,6 @@ function [res] = MUSCL_EulerRes2d_v0(q,~,dx,dy,N,M,limiter,fluxMethod)
         qR = cell(M-1,j).qS;     qL = qR;
         switch fluxMethod
             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[0,1]); % F_{i+1/2,j}
-            case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[0,1]); % F_{i+1/2,j}
         end
         cell(M-1,j).res = cell(M-1,j).res + flux/dy;
     end
@@ -132,7 +129,6 @@ function [res] = MUSCL_EulerRes2d_v0(q,~,dx,dy,N,M,limiter,fluxMethod)
         qR = cell(i,N-1).qW;     qL = qR;
         switch fluxMethod
             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[1,0]); % F_{i,j+1/2}
-            case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[1,0]); % F_{i,j+1/2}
         end
         cell(i,N-1).res = cell(i,N-1).res + flux/dx;
     end
@@ -142,7 +138,6 @@ function [res] = MUSCL_EulerRes2d_v0(q,~,dx,dy,N,M,limiter,fluxMethod)
         qR = cell(2,j).qN;     qL = qR;
         switch fluxMethod
             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[0,-1]); % F_{i-1/2,j}
-            case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[0,-1]); % F_{i-1/2,j}
         end
         cell(2,j).res = cell(2,j).res + flux/dy;
     end
@@ -152,7 +147,6 @@ function [res] = MUSCL_EulerRes2d_v0(q,~,dx,dy,N,M,limiter,fluxMethod)
         qR = cell(i,2).qE;     qL = qR;
         switch fluxMethod
             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[-1,0]); % F_{i,j-1/2}
-            case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[-1,0]); % F_{i,j-1/2}
         end
         cell(i,2).res = cell(i,2).res + flux/dx;
     end
