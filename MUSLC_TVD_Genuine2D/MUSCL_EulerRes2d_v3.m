@@ -34,7 +34,19 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
             cell(i,j).qS = zeros(4,1);
             cell(i,j).qE = zeros(4,1);
             cell(i,j).qW = zeros(4,1);
-            cell(i,j).res = zeros(4,1);
+            cell(i,j).res= zeros(4,1);
+        end
+    end
+    
+    % Build Faces
+    face(M-1,N-1).all = (M-1)*(N-1);
+    for i = 1:M-1
+        for j = 1:N-1
+            face(i,j).HLLE_x = zeros(4,1);
+            face(i,j).HLLE_y = zeros(4,1);
+            face(i,j).HLLE_c = zeros(4,1);
+            face(i,j).flux_x = zeros(4,1);
+            face(i,j).flux_y = zeros(4,1);
         end
     end
 
@@ -79,8 +91,8 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
     %%%%%%%%%%%%%
     
     % Compute fluxes across all internal faces
-    for i = 2:M-2
-        for j = 2:N-2
+    for i = 1:M-1
+        for j = 1:N-1
             % Left (inside) and Right (outside) extrapolated q-values at the boundaries
             qxL = [cell( i,j ).qE]; % q_{i,j+1/2}^{-}
             qxR = [cell(i,j+1).qW]; % q_{i,j+1/2}^{+}
@@ -89,21 +101,34 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
             % compute flux at j+1/2 using
             switch fluxMethod
                 case 'HLLE1d' % Dim by Dim
-                    flux_x = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
-                    flux_y = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
+                    face(i,j).flux_x = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
+                    face(i,j).flux_y = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
                 case 'HLLE2d' % Genuine 2D
-                    HLLE_x = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
-                    HLLE_y = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
-                    HLLE_c = HLLE2dflux(qxL,qxR,qyL,qyR); % F_{i+1/2,j+1/2}
-                    flux_x = ;
-                    flux_y = ;
+                    face(i,j).HLLE_x = HLLE1Dflux(qxL,qxR,[1,0]);   % HLLE1d_{  i  ,j+1/2}
+                    face(i,j).HLLE_y = HLLE1Dflux(qyL,qyR,[0,1]);   % HLLE1d_{i+1/2,  j  }
+                    face(i,j).HLLE_c = HLLE2Dflux(qxL,qxR,qyL,qyR); % HLLE2d_{i+1/2,j+1/2}
                 otherwise, error('flux option not available');
             end
-            % contributions to the residual of cell (i,j) and cells around it
-            cell( i,j ).res = cell( i,j ).res + flux_x/dx;
-            cell(i,j+1).res = cell(i,j+1).res - flux_x/dx;
-            cell( i,j ).res = cell( i,j ).res + flux_y/dy;
-            cell(i+1,j).res = cell(i+1,j).res - flux_y/dy;
+        end
+    end
+    
+    % Assembling fluxes for HLLE2d with Simpsons Rule
+    if strcmp(fluxMethod,'HLLE2d')
+        for i = 2:M-1
+            for j = 2:N-1
+                face(i,j).flux_x = (HLLE_c(i,j) + 4*HLLE_x(i,j) + HLLE_c(i,j-1))/6; % F_{i,j+1/2}
+                face(i,j).flux_y = (HLLE_c(i,j) + 4*HLLE_y(i,j) + HLLE_c(i-1,j))/6; % F_{i+1/2,j}
+            end
+        end
+    end
+    
+    % contributions to the residual of cell (i,j) and cells around it
+    for i = 1:M-1
+        for j = 1:N-1
+            cell( i,j ).res = cell( i,j ).res + face(i,j).flux_x/dx;
+            cell(i,j+1).res = cell(i,j+1).res - face(i,j).flux_x/dx;
+            cell( i,j ).res = cell( i,j ).res + face(i,j).flux_y/dy;
+            cell(i+1,j).res = cell(i+1,j).res - face(i,j).flux_y/dy;
         end
     end
     
@@ -228,4 +253,11 @@ function HLLE = HLLE1Dflux(qL,qR,normal)
     
     % Compute the HLL flux.
     HLLE = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
+end
+
+function HLLE = HLLE2Dflux(qxL,qxR,qyL,qyR)
+    % Compute HLLE flux
+    global gamma
+    
+    
 end
