@@ -1,4 +1,4 @@
-function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
+function [res] = MUSCL_EulerRes2d_v4(q,~,dx,dy,N,M,~,fluxMethod)
 %   A genuine 2d HLLE Riemnan solver for Euler Equations using a Monotonic
 %   Upstreat Centered Scheme for Conservation Laws (MUSCL).
 %  
@@ -30,10 +30,6 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
     for i = 1:M
         for j = 1:N
             cell(i,j).q = [q(i,j,1);q(i,j,2);q(i,j,3);q(i,j,4)];
-            cell(i,j).qN = zeros(4,1);
-            cell(i,j).qS = zeros(4,1);
-            cell(i,j).qE = zeros(4,1);
-            cell(i,j).qW = zeros(4,1);
             cell(i,j).res= zeros(4,1);
         end
     end
@@ -49,72 +45,36 @@ function [res] = MUSCL_EulerRes2d_v3(q,~,dx,dy,N,M,limiter,fluxMethod)
             face(i,j).flux_y = zeros(4,1);
         end
     end
-
-    % Compute and limit slopes at cells (i,j)
-    for i = 2:M-1       % internal cells
-        for j = 2:N-1   % internal cells
-            for k = 1:4
-                dqw = (cell( i,j ).q(k) - cell(i,j-1).q(k)); % du btn j and j-1
-                dqe = (cell(i,j+1).q(k) - cell( i,j ).q(k)); % du btn j+1 and j
-                dqs = (cell( i,j ).q(k) - cell(i-1,j).q(k)); % du btn i and i-1
-                dqn = (cell(i+1,j).q(k) - cell( i,j ).q(k)); % du btn i+1 and i
-                switch limiter
-                    case 'MC' % MC limiter
-                        % Find dq_j = minmod{fwd diff, bwd diff, cntrl diff}
-                        dqc = (cell(i,j+1).q(k)-cell(i,j-1).q(k))/2; % du btn j+1 and j-1
-                        dqdx = minmod([2*dqw,2*dqe,dqc]);
-                        dqc = (cell(i+1,j).q(k)-cell(i-1,j).q(k))/2; % du btn j+1 and j-1
-                        dqdy = minmod([2*dqs,2*dqn,dqc]);
-                    case 'MM' % Minmod limiter
-                        % Find dq_j = minmod{fwd diff, bwd diff}
-                        dqdx = minmod([dqw,dqe]);
-                        dqdy = minmod([dqs,dqn]);
-                    case 'VA' % Van Albada limiter
-                        % Find dq_j = minmod{fwd diff, bwd diff}
-                        dqdx = vanalbada(dqw,dqe,dx);
-                        dqdy = vanalbada(dqs,dqn,dy);
-                    case 'VL' % Van Leer limiter
-                        % Find dq_j = vanAlvada{fwd diff, bwd diff, h }
-                        dqdx = vanLeer(dqw,dqe);
-                        dqdy = vanLeer(dqs,dqn);
-                end
-                cell(i,j).qE(k) = cell(i,j).q(k) + dqdx/2; % q_{i,j+1/2}^{-} from (i,j)
-                cell(i,j).qW(k) = cell(i,j).q(k) - dqdx/2; % q_{i,j-1/2}^{+} from (i,j)
-                cell(i,j).qN(k) = cell(i,j).q(k) + dqdy/2; % q_{i+1/2,j}^{-} from (i,j)
-                cell(i,j).qS(k) = cell(i,j).q(k) - dqdy/2; % q_{i-1/2,j}^{+} from (i,j)
-            end
-        end
-    end
     
 	%%%%%%%%%%%%%
     % Residuals %
     %%%%%%%%%%%%%
     
     % Compute fluxes across cells
-    for i = 2:M-2     % all internal faces 
+    for i = 2:M-2     % all internal faces
         for j = 2:N-2 % all internal faces
-            % Left (inside) and Right (outside) extrapolated q-values at the boundaries
-            qxL = [cell( i,j ).qE]; % q_{i,j+1/2}^{-}
-            qxR = [cell(i,j+1).qW]; % q_{i,j+1/2}^{+}
-            qyL = [cell( i,j ).qN]; % q_{i+1/2,j}^{-}
-            qyR = [cell(i+1,j).qS]; % q_{i+1/2,j}^{+}
+            qSW = cell( i , j ).q;
+            qSE = cell( i ,j+1).q;
+            qNW = cell(i+1, j ).q;
+            % compute HLLE1d flux
+            face(i,j).HLLE_x = HLLE1Dflux(qSW,qSE,[1,0]);   % HLLE1d_{  i  ,j+1/2}
+            face(i,j).HLLE_y = HLLE1Dflux(qSW,qNW,[0,1]);   % HLLE1d_{i+1/2,  j  }
+        end
+    end
+    
+    
+    % Compute fluxes at the corners of cells (the stagered grid)
+    for i = 2:M-2     % all internal faces
+        for j = 2:N-2 % all internal faces
             qSW = cell( i , j ).q;
             qSE = cell( i ,j+1).q;
             qNW = cell(i+1, j ).q;
             qNE = cell(i+1,j+1).q;
-            % compute flux at j+1/2 using
-            switch fluxMethod
-                case 'HLLE1d' % Dim by Dim
-                    face(i,j).flux_x = HLLE1Dflux(qxL,qxR,[1,0]); % F_{i,j+1/2}
-                    face(i,j).flux_y = HLLE1Dflux(qyL,qyR,[0,1]); % F_{i+1/2,j}
-                case 'HLLE2d' % Genuine 2D
-                    face(i,j).HLLE_x = HLLE1Dflux(qSW,qSE,[1,0]);   % HLLE1d_{  i  ,j+1/2}
-                    face(i,j).HLLE_y = HLLE1Dflux(qSW,qNW,[0,1]);   % HLLE1d_{i+1/2,  j  }
-                    face(i,j).HLLE_c = HLLE2Dflux(qSW,qSE,qNW,qNE); % HLLE2d_{i+1/2,j+1/2}
-                otherwise, error('flux option not available');
-            end
+            % compute HLLE2d flux
+            face(i,j).HLLE_c = HLLE2Dflux(qSW,qSE,qNW,qNE); % HLLE2d_{i+1/2,j+1/2}
         end
     end
+
     
     % Assembling fluxes for HLLE2d with Simpsons Rule
     if strcmp(fluxMethod,'HLLE2d')
@@ -195,27 +155,6 @@ end %
 % Auxiliary Functions %
 %%%%%%%%%%%%%%%%%%%%%%%
 
-function mm = minmod(v)
-    % Using Harten's generalized definition
-    % minmod: zero if opposite sign, otherwise the one of smaller magnitude.
-    s = sum(sign(v))/numel(v); 
-    if abs(s)==1; mm = s*min(abs(v(:))); else, mm=0; end
-    %m=size(v,1); mm=zeros(size(v,1),1); s=sum(sign(v),2)/m; ids=find(abs(s)==1);
-    %if(~isempty(ids)); mm(ids)=s(ids).*min(abs(v(ids,:)),[],2); end
-end
-
-function va = vanalbada(da,db,h)
-    % Van Albada Slope Limiter Function
-    % vanAlbada: extend the simetric formulation of the van leer limiter
-    eps2=(0.3*h)^3; 
-    va=0.5*(sign(da)*sign(db)+1)*((db^2+eps2)*da+(da^2+eps2)*db)/(da^2+db^2+2*eps2);
-end
-
-function vl = vanLeer(da,db)
-    % Van Leer Slope Limiter Function
-    vl = 0; if bd~=0, r=da/db; vl=(r+abs(r))/(1+abs(r)); end
-end
-
 function HLLE = HLLE1Dflux(qL,qR,normal)
     % Compute HLLE flux
     global gamma
@@ -260,4 +199,168 @@ function HLLE = HLLE1Dflux(qL,qR,normal)
     
     % Compute the HLL flux.
     HLLE = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
+end
+
+function HLLE = HLLE2Dflux(qSW,qSE,qNW,qNE)
+    % Compute HLLE flux
+    global gamma
+    
+    % West state
+    rSW = qSW(1);
+    uSW = qSW(2)/rSW;
+    vSW = qSW(3)/rSW;
+    pSW = (gamma-1)*( qSW(4) - rSW*(uSW^2+vSW^2)/2 );
+    aSW = sqrt(gamma*pSW/rSW);
+    HSW = ( qSW(4) + pSW ) / rSW;
+    
+    % East state
+    rSE = qSE(1);
+    uSE = qSE(2)/rSE;
+    vSE = qSE(3)/rSE;
+    pSE = (gamma-1)*( qSE(4) - rSE*(uSE^2+vSE^2)/2 );
+    aSE = sqrt(gamma*pSE/rSE);
+    HSE = ( qSE(4) + pSE ) / rSE;
+    
+    % South state
+    rNW = qNW(1);
+    uNW = qNW(2)/rNW;
+    vNW = qNW(3)/rNW;
+    pNW = (gamma-1)*( qNW(4) - rSW*(uNW^2+vNW^2)/2 );
+    aNW = sqrt(gamma*pNW/rNW);
+    HNW = ( qNW(4) + pNW ) / rNW;
+    
+    % North state
+    rNE = qNE(1);
+    uNE = qNE(2)/rNE;
+    vNE = qNE(3)/rNE;
+    pNE = (gamma-1)*( qNE(4) - rNE*(uNE^2+vNE^2)/2 );
+    aNE = sqrt(gamma*pNE/rNE);
+    HNE = ( qNE(4) + pNE ) / rNE;
+    
+    
+    
+    
+    % Compute Roe Averages - SW to SE
+    rSroe = sqrt(rSE/rSW); 
+    uSroe = (uSW+rSroe*uSE)/(1+rSroe);
+    vSroe = (vSW+rSroe*vSE)/(1+rSroe);
+    HSroe = (HSW+rSroe*HSE)/(1+rSroe);
+    aSroe = sqrt( (gamma-1)*(HSroe-0.5*(uSroe^2+vSroe^2)) );
+    
+    % Compute Roe Averages - NW to NE
+    rNroe = sqrt(rNE/rNW); 
+    uNroe = (uNW+rNroe*uNE)/(1+rNroe);
+    vNroe = (vNW+rNroe*vNE)/(1+rNroe);
+    HNroe = (HNW+rNroe*HNE)/(1+rNroe);
+    aNroe = sqrt( (gamma-1)*(HNroe-0.5*(uNroe^2+vNroe^2)) );
+    
+    % Compute Roe Averages - SW to NW
+    rWroe = sqrt(rSE/rSW); 
+    uWroe = (uSW+rWroe*uSE)/(1+rWroe);
+    vWroe = (vSW+rWroe*vSE)/(1+rWroe);
+    HWroe = (HSW+rWroe*HSE)/(1+rWroe);
+    aWroe = sqrt( (gamma-1)*(HWroe-0.5*(uWroe^2+vWroe^2)) );
+    
+    % Compute Roe Averages - SE to NE
+    rEroe = sqrt(rNE/rSE); 
+    uEroe = (uSE+rEroe*uNE)/(1+rEroe);
+    vEroe = (vSE+rEroe*vNE)/(1+rEroe);
+    HEroe = (HSE+rEroe*HNE)/(1+rEroe);
+    aEroe = sqrt( (gamma-1)*(HEroe-0.5*(uEroe^2+vEroe^2)) );
+    
+    
+    
+    
+    % Wave speed estimates in the S
+    sSW = min([ uSW-aSW, uSW+aSW, uSroe-aSroe, uSroe+aSroe ]);
+    sSE = max([ uSE-aSE, uSE+aSE, uSroe-aSroe, uSroe+aSroe ]);
+    
+    % Wave speed estimates in the N
+    sNW = min([ uNW-aNW, uNW+aNW, uNroe-aNroe, uNroe+aNroe ]);
+    sNE = max([ uNE-aNE, uNE+aNE, uNroe-aNroe, uNroe+aNroe ]);
+    
+    % Wave speed estimates in the W
+    sWS = min([ uSW-aSW, uSW+aSW, uWroe-aWroe, uWroe+aWroe ]);
+    sWN = max([ uNW-aNW, uNW+aNW, uWroe-aWroe, uWroe+aWroe ]);
+    
+    % Wave speed estimates in the E
+    sES = min([ uSE-aSE, uSE+aSE, uEroe-aEroe, uEroe+aEroe ]);
+    sEN = max([ uNE-aNE, uNE+aNE, uEroe-aEroe, uEroe+aEroe ]);
+    
+    % The maximum wave speed delimit the interacting region to a square domain
+    sS  = min(sWS,sES); 
+    sN  = max(sWN,sEN); 
+    sW  = min(sSW,sNW); 
+    sE  = max(sSE,sNE); 
+
+    
+    
+    
+    % Compute fluxes
+    fSW = [rSW*uSW; rSW*uSW*uSW + pSW; rSW*vSW*uSW; rSW*uSW*HSW];
+    fSE = [rSE*uSE; rSE*uSE*uSE + pSE; rSE*vSE*uSE; rSE*uSE*HSE];
+    fNW = [rNE*uNE; rNE*uNE*uNE + pNE; rNE*vNE*uNE; rNE*uNE*HNE];
+    fNE = [rNE*uNE; rNE*uNE*uNE + pNE; rNE*vNE*uNE; rNE*uNE*HNE];
+    
+    gSW = [rSW*vSW; rSW*vSW*uSW; rSW*vSW*vSW + pSW; rSW*vSW*HSW];
+    gSE = [rSE*vSE; rSE*vSE*uSE; rSE*vSE*vSE + pSE; rSE*vSE*HSE];
+    gNW = [rNW*vNW; rNW*vNW*uNW; rNW*vNW*vNW + pNW; rNW*vNW*HNW];
+    gNE = [rNE*vNE; rNE*vNE*uNE; rNE*vNE*vNE + pNE; rNE*vNE*HNE];
+    
+    % Compute the intermediate states
+    qSO = ( SRp*qL - SLm*qR + f-f )/(SRp-SLm);
+    qNO = ( SRp*qL - SLm*qR + f-f )/(SRp-SLm);
+    qOW = ( SRp*qL - SLm*qR + g-g )/(SRp-SLm);
+    qOE = ( SRp*qL - SLm*qR + g-g )/(SRp-SLm);
+    
+    % Compute the intermediate states fluxes (normal HLLE 1d fluxes)
+    fSO = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
+    fNO = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
+    gOW = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
+    gOE = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
+    
+    % Compute the transverse intermediate fluxes (Balsara's solution)
+    fOS = [;;;];
+    fON = [;;;];
+    gWO = [;;;];
+    gEO = [;;;];
+    
+    % Compute the strongly interacting state q**
+    qOO = 1/((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW))*( ...
+        (sWN*sNE+sSE*sEN)*qNE - (sEN*sNW+sSW*sWN)*qNW + ...
+        (sES*sSW+sNW*sWN)*qSW - (sWS*sSE+sNE*sES)*qSE ... 
+        - sWN*fNE+sEN*fNW - sES*fSW+sWS*fSE - (sEN-sES)*fOE+(sWN-sWS)*fOW ...
+        - sSE*gNE+sSW*gNW - sNW*gSW+sNE*gSE - (sNE-sNW)*gNO+(sSE-sSW)*gSO);
+    
+    % Compute the fluxes of the strongly interacting state: f** and g**
+    % Precompute deltas
+    dq1 = sNW*sEN-sWN*sNE; df1 = sWN-sEN; dg1 = sNE-sNW;
+    dq2 = sSW*sWN-sWS*sNW; df2 = sWS-sWN; dg2 = sNW-sSW;
+    dq3 = sSE*sWS-sES*sSW; df3 = sES-sWS; dg3 = sSW-sSE;
+    dq4 = sNE*sES-sEN*sSE; df4 = sEN-sES; dg4 = sSE-sNE;
+    
+    % Using the LSQ strategy to solve an over-determined problem
+    b1 = dq1*(qNO-qOO) + df1*fNO + dg1*gNO;
+    b2 = dq2*(qOW-qOO) + df2*fOW + dg2*gOW;
+    b3 = dq3*(qSO-qOO) + df3*fSO + dg3*gSO;
+    b4 = dq4*(qOE-qOO) + df4*fOE + dg4*gOE;
+    
+    % k-weights
+    k11 = df1*(dg2^2+dg3^2+dg4^2) - dg1*(df2*dg2+df3*dg3+df4*dg4);
+    k12 = df2*(dg1^2+dg3^2+dg4^2) - dg2*(df1*dg1+df3*dg3+df4*dg4);
+    k13 = df3*(dg1^2+dg2^2+dg4^2) - dg3*(df1*dg1+df2*dg2+df4*dg4);
+    k14 = df4*(dg1^2+dg2^2+dg3^2) - dg4*(df1*dg1+df2*dg2+df3*dg3);
+    k21 = dg1*(df2^2+df3^2+df4^2) - df1*(df2*dg2+df3*dg3+df4*dg4);
+    k22 = dg2*(df1^2+df3^2+df4^2) - df2*(df1*dg1+df3*dg3+df4*dg4);
+    k23 = dg3*(df1^2+df2^2+df4^2) - df3*(df1*dg1+df2*dg2+df4*dg4);
+    k24 = dg4*(df1^2+df2^2+df3^2) - df4*(df1*dg1+df2*dg2+df3*dg3);
+    
+    %A = [df1,dg1;df2,dg2;df3,dg3;df4,dg4]; M=A'*A; detM=det(M);
+    detM = (df1*dg2-df2*dg1)^2 + (df1*dg3-df3*dg1)^2 + (df2*dg4-df4*dg2)^2 + ...
+        (df3*dg2-df2*dg3)^2 + (df4*dg1-df1*dg4)^2 + (df4*dg3-df3*dg4)^2 ; % verified!
+    
+    % compute fluxes of Strongly Interacting state f** and g**
+    fOO = (k11*b1 + k12*b2 + k13*b3 + k14*b4)/detM;
+    gOO = (k21*b1 + k22*b2 + k23*b3 + k24*b4)/detM;
+    
 end

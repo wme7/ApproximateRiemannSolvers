@@ -166,6 +166,10 @@ detM = (df1*dg2-df2*dg1)^2 + (df1*dg3-df3*dg1)^2 + (df2*dg4-df4*dg2)^2 + ...
 f00 = (k11*b1 + k12*b2 + k13*b3 + k14*b4)/detM;
 g00 = (k21*b1 + k22*b2 + k23*b3 + k24*b4)/detM;
 
+%% Form I
+
+
+
 %% Form II
 % Precompute c1 and c2
 c1 = dq1*dq3*(qNo-qSo) + df1*dq3*fNo - df3*dq1*fSo + dg1*dq3*gNo - dg3*dq1*gSo;
@@ -178,49 +182,3 @@ a21 = df4*dq2-df2*dq4;    a22 = dg4*dq2-dg2*dq4;
 % Compute fluxes of the Strongly Interacting state: f** and g**
 foo=( a22*c1-a12*c2)/(a11*a22-a12*a21);
 goo=(-a21*c1+a11*c2)/(a11*a22-a12*a21);
-
-
-
-% Pseudocode 3 in ref.[1], it is meant to design phix^{~HLL2D} &
-% phiy^{~HLL2D} according with the author
-%     if (sW>=0) && (sS>=0)
-%         phi2x = ((sN-sS)*f_W + sS*fSW)/sN;
-%         phi2y = ((sE-sW)*gS_ + sW*gSW)/sE;
-%     elseif (sW>=0) && (sN<=0)
-%         phi2x = ((sS-sN)*f_W + sN*fNW)/sS;
-%         phi2y = ((sE-sW)*gS_ + sW*gNW)/sE;
-%     elseif (sE<=0) && (sS>=0)
-%         phi2x = ((sN-sS)*f_E + sS*fSE)/sN;
-%         phi2y = ((sW-sE)*gS_ + sE*gSE)/sW;
-%     elseif (sE<=0) && (sN<=0)
-%         phi2x = ((sS-sN)*f_E + sN*fNE)/sS;
-%         phi2y = ((sW-sE)*gN_ + sE*gNE)/sW;
-%     elseif sW>=0
-%         phi2x = f_W;
-%         phi2y = ((sE-sW)*g__ + sW*g_W)/sE;
-%     elseif sE<=0
-%         phi2x = f_E;
-%         phi2y = ((sW-sE)*g__ + sE*g_E)/sW;
-%     elseif sS>=0
-%         phi2x = ((sN-sS)*f__ + sS*fS_)/sN;
-%         phi2y = gS_;
-%     elseif sN<=0
-%         phi2x = ((sS-sN)*f__ + sN*fN_)/sS;
-%         phi2y = gN_;
-%     else
-%         phi2x = f__;
-%         phi2y = g__;
-%     end
-
-%% DO NOT ERASE!
-
-% % Using mid state and normal flux compute
-%     if prod(abs(normal)==[1,0]);	% given f: x-flux compute g: y-flux 
-%         p=nF(2)-qS(2)^2/qS(1); 
-%         tF=[qS(3); qS(2)*qS(3)/qS(1); qS(3)^2/qS(1)+p; qS(3)*(qS(4)+p/qS(1))];
-%         %tF = [qS(3); qS(2)*qS(3)/qS(1); nF(2)+(qS(3)^2-qS(2)^2)/qS(1); qS(3)*qS(4)/qS(2)];
-%     else                            % given g: y-flux compute f: x-flux
-%         p=nF(3)-qS(3)^2/qS(1); 
-%         tF=[qS(2); qS(2)^2/qS(1)+p; qS(3)*qS(2)/qS(1); qS(2)*(qS(4)+p/qS(1))];
-%         %tF = [qS(2); nF(3)+(qS(2)^2-qS(3)^2)/qS(1); qS(3)*qS(2)/qS(1); qS(2)*nF(4)/qS(3)];
-%     end
