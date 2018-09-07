@@ -1,74 +1,131 @@
 %% Plot the Strongly Interacting state q**
 % by Manuel Diaz
-
 clear; clc; close all;
+global gamma; gamma = 1.4;
 
-load('q_corners.mat'); dx=0.5; dy=0.5;
+% Build a 2x2 mesh
+dx=0.5; dy=0.5; [x,y]=meshgrid([0,1],[0,1]);
+[r0,u0,v0,p0] = Euler_IC2d(x,y,05);
+E0 = p0./((gamma-1)*r0)+0.5*(u0.^2+v0.^2);  % Total Energy
+c0 = sqrt(gamma*p0./r0);                    % Speed of sound
+ q = cat(3, r0, r0.*u0, r0.*v0, r0.*E0);    % initial state
+ 
+% The corner data is obtained as
+i=1; j=1;
+qSW = q( i , j ,:);
+qSE = q( i ,j+1,:);
+qNW = q(i+1, j ,:);
+qNE = q(i+1,j+1,:);
 
-% % Build 2d following ideas in refernce [1]
-% qSoL= cell( i , j ).q + cell( i , j ).dqdx*dx/2; % q_{ i ,j+1/2}^{-} from ( i , j )
-% qSoR= cell( i ,j+1).q - cell( i ,j+1).dqdx*dx/2; % q_{ i ,j+1/2}^{+} from ( i ,j+1)
-% [qSo,fSo,gSo,sSW,sSE]=HLLE1d(qSoL,qSoR,gamma,[1,0]); % mid state, flux and wave speeds
-% 
-% qoWL= cell( i , j ).q + cell( i,  j ).dqdy*dy/2; % q_{i+1/2, j }^{-} from ( i , j )
-% qoWR= cell(i+1, j ).q - cell(i+1, j ).dqdy*dy/2; % q_{i+1/2, j }^{-} from (i+1, j )
-% [qoW,goW,foW,sWS,sWN]=HLLE1d(qoWL,qoWR,gamma,[0,1]); % mid state, flux and wave speeds
-% 
-% qoEL= cell( i ,j+1).q + cell( i ,j+1).dqdy*dy/2; % q_{ i ,j+1/2}^{-} from ( i ,j+1)
-% qoER= cell(i+1,j+1).q - cell(i+1,j+1).dqdy*dy/2; % q_{ i ,j+1/2}^{-} from (i+1,j+1)
-% [qoE,goE,foE,sES,sEN]=HLLE1d(qoEL,qoER,gamma,[0,1]); % mid state, flux and wave speeds
-% 
-% qNoL= cell(i+1, j ).q + cell(i+1, j ).dqdx*dx/2; % q_{i+1/2, j }^{-} from (i+1, j )
-% qNoR= cell(i+1,j+1).q - cell(i+1,j+1).dqdx*dx/2; % q_{i+1/2, j }^{-} from (i+1,j+1)
-% [qNo,fNo,gNo,sNW,sNE]=HLLE1d(qNoL,qNoR,gamma,[1,0]); % mid state, flux and wave speeds
-% 
-% % verify
-% array2table([qSW,qSE,qNW,qNE],'VariableNames',{'qSW','qSE','qNW','qNE'})
-% array2table([fSW,fSE,fNW,fNE],'VariableNames',{'fSW','fSE','fNW','fNE'})
-% array2table([gSW,gSE,gNW,gNE],'VariableNames',{'gSW','gSE','gNW','gNE'})
-% 
-% array2table([qoW,qSo,qNo,qoE],'VariableNames',{'qoW','qSo','qNo','qoE'})
-% array2table([foW,fSo,fNo,foE],'VariableNames',{'foW','fSo','fNo','foE'})
-% array2table([goW,gSo,gNo,goE],'VariableNames',{'goW','gSo','gNo','goE'})
+% West state
+rSW = qSW(1);
+uSW = qSW(2)/rSW;
+vSW = qSW(3)/rSW;
+pSW = (gamma-1)*( qSW(4) - rSW*(uSW^2+vSW^2)/2 );
+aSW = sqrt(gamma*pSW/rSW);
+HSW = ( qSW(4) + pSW ) / rSW;
 
-% Define speeds \tilde{s}_\alpha for alpha \in (N,S,E,W)
-if (sES>=0) && (sWS>=0)     % Speeds Above x-axis
-    sE = sSE;
-    sW = sSW;
-elseif (sEN<=0) && (sWN<=0) % Speeds Below x-axis
-    sE = sNE;
-    sW = sNW;
-else
-    sE = max(sNE,0)-max(sEN,0)*(max(sSE,0)-max(sNE,0))/(min(sES,0)-max(sEN,0));
-    sW = min(sSW,0)-min(sWS,0)*(min(sNW,0)-min(sSW,0))/(max(sWN,0)-min(sWS,0));
-end
-if (sNW>=0) && (sSW>=0)     % Right of y-axis
-    sN = sWN;
-    sS = sWS;
-elseif (sNE<=0) && (sSE<=0) % Left of y-axis
-    sN = sEN;
-    sS = sES;
-else
-    sN = max(sWN,0)-min(sNW,0)*(max(sWN,0)-max(sEN,0))/(min(sNW,0)-max(sNE,0));
-    sS = min(sES,0)-max(sSE,0)*(min(sES,0)-min(sWS,0))/(max(sSE,0)-min(sSW,0));
-end
+% East state
+rSE = qSE(1);
+uSE = qSE(2)/rSE;
+vSE = qSE(3)/rSE;
+pSE = (gamma-1)*( qSE(4) - rSE*(uSE^2+vSE^2)/2 );
+aSE = sqrt(gamma*pSE/rSE);
+HSE = ( qSE(4) + pSE ) / rSE;
 
-% Verify!
+% South state
+rNW = qNW(1);
+uNW = qNW(2)/rNW;
+vNW = qNW(3)/rNW;
+pNW = (gamma-1)*( qNW(4) - rSW*(uNW^2+vNW^2)/2 );
+aNW = sqrt(gamma*pNW/rNW);
+HNW = ( qNW(4) + pNW ) / rNW;
+
+% North state
+rNE = qNE(1);
+uNE = qNE(2)/rNE;
+vNE = qNE(3)/rNE;
+pNE = (gamma-1)*( qNE(4) - rNE*(uNE^2+vNE^2)/2 );
+aNE = sqrt(gamma*pNE/rNE);
+HNE = ( qNE(4) + pNE ) / rNE;
+
+
+
+
+% Compute Roe Averages - SW to SE
+rSroe = sqrt(rSE/rSW); 
+uSroe = (uSW+rSroe*uSE)/(1+rSroe);
+vSroe = (vSW+rSroe*vSE)/(1+rSroe);
+HSroe = (HSW+rSroe*HSE)/(1+rSroe);
+aSroe = sqrt( (gamma-1)*(HSroe-0.5*(uSroe^2+vSroe^2)) );
+
+% Compute Roe Averages - NW to NE
+rNroe = sqrt(rNE/rNW); 
+uNroe = (uNW+rNroe*uNE)/(1+rNroe);
+vNroe = (vNW+rNroe*vNE)/(1+rNroe);
+HNroe = (HNW+rNroe*HNE)/(1+rNroe);
+aNroe = sqrt( (gamma-1)*(HNroe-0.5*(uNroe^2+vNroe^2)) );
+
+% Compute Roe Averages - SW to NW
+rWroe = sqrt(rSE/rSW); 
+uWroe = (uSW+rWroe*uSE)/(1+rWroe);
+vWroe = (vSW+rWroe*vSE)/(1+rWroe);
+HWroe = (HSW+rWroe*HSE)/(1+rWroe);
+aWroe = sqrt( (gamma-1)*(HWroe-0.5*(uWroe^2+vWroe^2)) );
+
+% Compute Roe Averages - SE to NE
+rEroe = sqrt(rNE/rSE); 
+uEroe = (uSE+rEroe*uNE)/(1+rEroe);
+vEroe = (vSE+rEroe*vNE)/(1+rEroe);
+HEroe = (HSE+rEroe*HNE)/(1+rEroe);
+aEroe = sqrt( (gamma-1)*(HEroe-0.5*(uEroe^2+vEroe^2)) );
+
+
+
+
+% Wave speed estimates in the S
+sSW = min([ uSW-aSW, uSW+aSW, uSroe-aSroe, uSroe+aSroe ]);
+sSE = max([ uSE-aSE, uSE+aSE, uSroe-aSroe, uSroe+aSroe ]);
+
+% Wave speed estimates in the N
+sNW = min([ uNW-aNW, uNW+aNW, uNroe-aNroe, uNroe+aNroe ]);
+sNE = max([ uNE-aNE, uNE+aNE, uNroe-aNroe, uNroe+aNroe ]);
+
+% Wave speed estimates in the W
+sWS = min([ uSW-aSW, uSW+aSW, uWroe-aWroe , uWroe+aWroe ]);
+sWN = max([ uNW-aNW, uNW+aNW, uWroe-aWroe , uWroe+aWroe ]);
+
+% Wave speed estimates in the E
+sES = min([ uSE-aSE, uSE+aSE, uEroe-aEroe, uEroe+aEroe ]);
+sEN = max([ uNE-aNE, uNE+aNE, uEroe-aEroe, uEroe+aEroe ]);
+
+% The maximum wave speed delimit the interacting region to a square domain
+sS  = min(sWS,sES); 
+sN  = max(sWN,sEN); 
+sW  = min(sSW,sNW); 
+sE  = max(sSE,sNE); 
+
+
+% Verify, Verify, Verify!
 [x,y] = meshgrid([-dx/2,0,dx/2],[-dy/2,0,dy/2]);
 surf(x,y,zeros(3)); hold on; dt = 0.1;
-xs = [sWS*dt,sSE*dt,sNW*dt,sNE*dt,0,0]';
-ys = [sSW*dt,sES*dt,sWN*dt,sEN*dt,0,0]';
+xs = [sSW*dt,sNW*dt,sNE*dt,sSE*dt,0,0]';
+ys = [sWS*dt,sWN*dt,sEN*dt,sES*dt,0,0]';
 zs = [dt,dt,dt,dt,0,dt]';
 DT = delaunayTriangulation(xs,ys,zs);
 scatter3([sNE,sNW,sSE,sSW]*dt,[sEN,sWN,sES,sWS]*dt,[dt,dt,dt,dt]);
-scatter3([sE*dt,sW*dt,0,0],[0,0,sN*dt,sS*dt],[dt,dt,dt,dt],...
+rectangle('Position',[sW*dt sS*dt (sE-sW)*dt (sN-sS)*dt]);
+scatter3([0,0,sE*dt,sW*dt],[sN*dt,sS*dt,0,0],[dt,dt,dt,dt],...
     'MarkerEdgeColor','k','MarkerFaceColor',[0 .75 .75]);
-tetramesh(DT); hold off; camorbit(10,0);
-    
+xlabel('x'); ylabel('y'); tetramesh(DT); hold off; view(0,90);
+
+
+
 % Area of the main quadrilateral
 aoo = (dt^2/2)*((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW)); disp(aoo);
 a22 = polyarea([sNE,sNW,sSE,sSW]*dt,[sEN,sWN,sES,sWS]*dt); disp(a22);
 disp(aoo==a22)
+
 
 % Strongly Interacting state q**
 qoo = 1/((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW))*( ...
@@ -76,6 +133,8 @@ qoo = 1/((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW))*( ...
      (sES*sSW+sNW*sWN)*qSW - (sWS*sSE+sNE*sES)*qSE ...
    - sWN*fNE+sEN*fNW - sES*fSW+sWS*fSE - (sEN-sES)*foE+(sWN-sWS)*foW ...
    - sSE*gNE+sSW*gNW - sNW*gSW+sNE*gSE - (sNE-sNW)*gNo+(sSE-sSW)*gSo );
+
+
 
 % Precompute deltas
 dq1 = sNW*sEN-sWN*sNE; df1 = sWN-sEN; dg1 = sNE-sNW;

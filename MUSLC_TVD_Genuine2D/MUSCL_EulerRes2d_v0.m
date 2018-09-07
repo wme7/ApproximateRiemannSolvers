@@ -152,11 +152,14 @@ function [res] = MUSCL_EulerRes2d_v0(q,~,dx,dy,N,M,limiter,fluxMethod)
     end
     
     % Prepare residual as layers: [rho, rho*u, rho*v, rho*E]
-    parfor i = 1:M
-        for j = 1:N
+    parfor i = 2:M-1
+        for j = 2:N-1
             res(i,j,:) = cell(i,j).res;
         end
     end
+    
+    % Debug
+    % Q=[cell(:,:).res]; Q=reshape(Q(1,:),M,N); surf(Q);
 end % 
 
 %%%%%%%%%%%%%%%%%%%%%%%
