@@ -76,9 +76,9 @@ if isempty(poolobj); parpool('local',2); end
 
 % Run scheme
 switch assmble
-    case 'none', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v3; % Do HLLE1d Dim by Dim
-    case 'manual', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v1; % Manual assembly (working on it)
-    case 'simpson', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v2; % Use Simpsons rule (working on it)
+    case 'none', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v0; % Do HLLE1d Dim by Dim
+    case 'manual', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v1; % 1st-order HLLE2d (working on it)
+    case 'simpson', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v2; % 2nd-order HLLE2d (working on it)
     otherwise, error('flux assamble not available');
 end
 
