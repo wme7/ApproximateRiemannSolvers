@@ -160,9 +160,9 @@ gNO = [qNO(3);qNO(2)*qNO(3)/qNO(1);fNO(2)+(qNO(3)^2-qNO(2)^2)/qNO(1);qNO(3)*fNO(
 
 
 % Area of the main quadrilateral
-aoo = (dt^2/2)*((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW)); disp(aoo);
+aOO = (dt^2/2)*((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW)); disp(aOO);
 a22 = polyarea([sNE,sNW,sSE,sSW]*dt,[sEN,sWN,sES,sWS]*dt); disp(a22);
-disp(aoo==a22)
+disp(aOO==a22)
 
 % Strongly Interacting state q**
 qOO = 1/((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW))*( ...
@@ -171,13 +171,14 @@ qOO = 1/((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW))*( ...
    - sWN*fNE+sEN*fNW - sES*fSW+sWS*fSE - (sEN-sES)*fOE+(sWN-sWS)*fOW ...
    - sSE*gNE+sSW*gNW - sNW*gSW+sNE*gSE - (sNE-sNW)*gNO+(sSE-sSW)*gSO );
 
+%% Form 0: Compute fluxes of the strongly interacting state
 % Precompute deltas
 dq1 = sNW*sEN-sWN*sNE; df1 = sWN-sEN; dg1 = sNE-sNW;
 dq2 = sSW*sWN-sWS*sNW; df2 = sWS-sWN; dg2 = sNW-sSW;
 dq3 = sSE*sWS-sES*sSW; df3 = sES-sWS; dg3 = sSW-sSE;
 dq4 = sNE*sES-sEN*sSE; df4 = sEN-sES; dg4 = sSE-sNE;
 
-%% USING LSQ
+% Using LSQ
 b1 = dq1*(qNO-qOO) + df1*fNO + dg1*gNO;
 b2 = dq2*(qOW-qOO) + df2*fOW + dg2*gOW;
 b3 = dq3*(qSO-qOO) + df3*fSO + dg3*gSO;
@@ -202,7 +203,14 @@ fOO = (k11*b1 + k12*b2 + k13*b3 + k14*b4)/detM;
 gOO = (k21*b1 + k22*b2 + k23*b3 + k24*b4)/detM;
 
 %% Form I
+A1=[sSE+sSW-sNE-sNW,sNW+sSW-sNE-sSE;...
+    sES+sWS-sEN-sWN,sWN+sWS-sEN-sES];
 
+f00=zeros(4,1); g00=zeros(4,1);
+for i=1:4
+    F00=-dt^2/(4*aOO)*A1*[b1(i)-b3(i);b4(i)-b2(i)]; 
+    f00(i)=F00(1); g00(i)=F00(2);
+end
 
 
 %% Form II
@@ -219,5 +227,5 @@ foo=( a22*c1-a12*c2)/(a11*a22-a12*a21);
 goo=(-a21*c1+a11*c2)/(a11*a22-a12*a21);
 
 % Compare solutions of methods
-disp([fOO,foo]);
-disp([gOO,goo]);
+disp([fOO,f00,foo]);
+disp([gOO,g00,goo]);
