@@ -39,7 +39,7 @@ ny      = 100;      % Number of cells/Elements in y;
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available;
 fluxMth ='HLLE1d';  % HLLE1d, HLLE2d;
-assmble ='none';	% 'none', 'manual' or 'simpson';
+method  = 2;	    % 1:Dim by Dim, 2:HLLE2d 1st-order, 3:HLLE2d 2nd-order;
 limiter ='MC';      % MM, MC, VA, VL;
 plotFig = true;     % true:visualize evolution;
 
@@ -75,10 +75,10 @@ poolobj = gcp('nocreate'); % If no pool, do not create new one.
 if isempty(poolobj); parpool('local',2); end
 
 % Run scheme
-switch assmble
-    case 'none', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v0; % Do HLLE1d Dim by Dim
-    case 'manual', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v1; % 1st-order HLLE2d (working on it)
-    case 'simpson', MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v2; % 2nd-order HLLE2d (working on it)
+switch method
+    case 1, MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v0; % Do HLLE1d Dim by Dim
+    case 2, MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v1; % 1st-order HLLE2d (working on it)
+    case 3, MUSCL_EulerRes2d = @MUSCL_EulerRes2d_v2; % 2nd-order HLLE2d (working on it)
     otherwise, error('flux assamble not available');
 end
 

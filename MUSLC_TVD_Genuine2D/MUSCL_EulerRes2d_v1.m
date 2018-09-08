@@ -1,4 +1,4 @@
-function [res] = MUSCL_EulerRes2d_v4(q,~,dx,dy,N,M,~,fluxMethod)
+function [res] = MUSCL_EulerRes2d_v1(q,dt,dx,dy,N,M,~,fluxMethod)
 %   A genuine 2d HLLE Riemnan solver for Euler Equations using a Monotonic
 %   Upstreat Centered Scheme for Conservation Laws (MUSCL).
 %  
@@ -40,7 +40,8 @@ function [res] = MUSCL_EulerRes2d_v4(q,~,dx,dy,N,M,~,fluxMethod)
         for j = 1:N-1
             face(i,j).HLLE_x = zeros(4,1);
             face(i,j).HLLE_y = zeros(4,1);
-            face(i,j).HLLE_c = zeros(4,1);
+            face(i,j).HLLE2x = zeros(4,1);
+            face(i,j).HLLE2y = zeros(4,1);
             face(i,j).flux_x = zeros(4,1);
             face(i,j).flux_y = zeros(4,1);
         end
@@ -71,7 +72,8 @@ function [res] = MUSCL_EulerRes2d_v4(q,~,dx,dy,N,M,~,fluxMethod)
             qNW = cell(i+1, j ).q;
             qNE = cell(i+1,j+1).q;
             % compute HLLE2d flux
-            face(i,j).HLLE_c = HLLE2Dflux(qSW,qSE,qNW,qNE); % HLLE2d_{i+1/2,j+1/2}
+            [face(i,j).HLLE2x,face(i,j).HLLE2y] = ...
+                HLLE2Dflux(qSW,qSE,qNW,qNE); % HLLE2d_{i+1/2,j+1/2}
         end
     end
 
@@ -80,8 +82,8 @@ function [res] = MUSCL_EulerRes2d_v4(q,~,dx,dy,N,M,~,fluxMethod)
     if strcmp(fluxMethod,'HLLE2d')
         for i = 2:M-1     % internal nodes
             for j = 2:N-1 % internal nodes
-                face(i,j).flux_x = (HLLE_c(i,j) + 4*HLLE_x(i,j) + HLLE_c(i,j-1))/6; % F_{i,j+1/2}
-                face(i,j).flux_y = (HLLE_c(i,j) + 4*HLLE_y(i,j) + HLLE_c(i-1,j))/6; % F_{i+1/2,j}
+                face(i,j).flux_x = (HLLE2x(i,j) + 4*HLLE_x(i,j) + HLLE2x(i,j-1))/6; % F_{i,j+1/2}
+                face(i,j).flux_y = (HLLE2y(i,j) + 4*HLLE_y(i,j) + HLLE2y(i-1,j))/6; % F_{i+1/2,j}
             end
         end
     end
@@ -100,45 +102,45 @@ function [res] = MUSCL_EulerRes2d_v4(q,~,dx,dy,N,M,~,fluxMethod)
     % set BCs %
     %%%%%%%%%%%
     
-    % Flux contribution of the MOST NORTH FACE: north face of cells j=M-1.
-    for j = 2:N-2
-        qL = cell(M-1,j).qS;     qR = qL;
-        switch fluxMethod
-            case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[0,1]); % F_{i+1/2,j}
-            case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[0,1]); % F_{i+1/2,j}
-        end
-        cell(M-1,j).res = cell(M-1,j).res + flux/dy;
-    end
-    
-    % Flux contribution of the MOST EAST FACE: east face of cell j=N-1.
-    for i = 2:M-2
-        qL = cell(i,N-1).qW;     qR = qL;
-        switch fluxMethod
-            case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[1,0]); % F_{i,j+1/2}
-            case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[1,0]); % F_{i,j+1/2}
-        end
-        cell(i,N-1).res = cell(i,N-1).res + flux/dx;
-    end
-    
-    % Flux contribution of the MOST SOUTH FACE: south face of cells j=2.
-    for j = 2:N-2
-        qR = cell(2,j).qN;     qL = qR;
-        switch fluxMethod
-            case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[0,-1]); % F_{i-1/2,j}
-            case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[0,-1]); % F_{i-1/2,j}
-        end
-        cell(2,j).res = cell(2,j).res + flux/dy;
-    end
-    
-    % Flux contribution of the MOST WEST FACE: west face of cells j=2.
-    for i = 2:M-2
-        qR = cell(i,2).qE;     qL = qR;
-        switch fluxMethod
-            case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[-1,0]); % F_{i,j-1/2}
-            case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[-1,0]); % F_{i,j-1/2}
-        end
-        cell(i,2).res = cell(i,2).res + flux/dx;
-    end
+%     % Flux contribution of the MOST NORTH FACE: north face of cells j=M-1.
+%     for j = 2:N-2
+%         qL = cell(M-1,j).qS;     qR = qL;
+%         switch fluxMethod
+%             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[0,1]); % F_{i+1/2,j}
+%             case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[0,1]); % F_{i+1/2,j}
+%         end
+%         cell(M-1,j).res = cell(M-1,j).res + flux/dy;
+%     end
+%     
+%     % Flux contribution of the MOST EAST FACE: east face of cell j=N-1.
+%     for i = 2:M-2
+%         qL = cell(i,N-1).qW;     qR = qL;
+%         switch fluxMethod
+%             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[1,0]); % F_{i,j+1/2}
+%             case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[1,0]); % F_{i,j+1/2}
+%         end
+%         cell(i,N-1).res = cell(i,N-1).res + flux/dx;
+%     end
+%     
+%     % Flux contribution of the MOST SOUTH FACE: south face of cells j=2.
+%     for j = 2:N-2
+%         qR = cell(2,j).qN;     qL = qR;
+%         switch fluxMethod
+%             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[0,-1]); % F_{i-1/2,j}
+%             case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[0,-1]); % F_{i-1/2,j}
+%         end
+%         cell(2,j).res = cell(2,j).res + flux/dy;
+%     end
+%     
+%     % Flux contribution of the MOST WEST FACE: west face of cells j=2.
+%     for i = 2:M-2
+%         qR = cell(i,2).qE;     qL = qR;
+%         switch fluxMethod
+%             case 'HLLE1d', flux = HLLE1Dflux(qL,qR,[-1,0]); % F_{i,j-1/2}
+%             case 'HLLE2d', flux = HLLE1Dflux(qL,qR,[-1,0]); % F_{i,j-1/2}
+%         end
+%         cell(i,2).res = cell(i,2).res + flux/dx;
+%     end
     
     % Prepare residual as layers: [rho, rho*u, rho*v, rho*E]
     parfor i = 2:M-1
@@ -201,7 +203,7 @@ function HLLE = HLLE1Dflux(qL,qR,normal)
     HLLE = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
 end
 
-function [HLLE] = HLLE2Dflux(qSW,qSE,qNW,qNE)
+function [fOO,gOO] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     % Compute HLLE flux
     global gamma
     
@@ -287,15 +289,8 @@ function [HLLE] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     sES = min([ uSE-aSE, uSE+aSE, uEroe-aEroe, uEroe+aEroe ]);
     sEN = max([ uNE-aNE, uNE+aNE, uEroe-aEroe, uEroe+aEroe ]);
     
-    % The maximum wave speeds define a square limit for the strongly
-    % interacting region
-    sS  = min(sWS,sES); 
-    sN  = max(sWN,sEN); 
-    sW  = min(sSW,sNW); 
-    sE  = max(sSE,sNE); 
+ 
 
-    
-    
     
     % Compute fluxes
     fSW = [rSW*uSW; rSW*uSW*uSW + pSW; rSW*vSW*uSW; rSW*uSW*HSW];
@@ -309,38 +304,39 @@ function [HLLE] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     gNE = [rNE*vNE; rNE*vNE*uNE; rNE*vNE*vNE + pNE; rNE*vNE*HNE];
     
     % Compute the intermediate states
-    qSO = ( SRp*qL - SLm*qR + f-f )/(SRp-SLm);
-    qNO = ( SRp*qL - SLm*qR + f-f )/(SRp-SLm);
-    qOW = ( SRp*qL - SLm*qR + g-g )/(SRp-SLm);
-    qOE = ( SRp*qL - SLm*qR + g-g )/(SRp-SLm);
+    qSO = ( sSE*qSE - sSW*qSW + fSW-fSE )/(sSE-sSW);
+    qNO = ( sNE*qNE - sNW*qNW + fNW-fNE )/(sNE-sNW);
+    qOW = ( sWN*qNW - sWS*qSW + gSW-gNW )/(sWN-sWS);
+    qOE = ( sEN*qNE - sES*qSE + gSE-gNE )/(sEN-sES);
     
     % Compute the intermediate states fluxes (normal HLLE 1d fluxes)
-    fSO = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
-    fNO = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
-    gOW = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
-    gOE = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
+    fSO = ( sSE*fSW - sSW*fSE + sSW*sSE*(qSE-qSW) )/(sSE-sSW);
+    fNO = ( sNE*fNW - sNW*fNE + sNW*sNE*(qNE-qNW) )/(sNE-sNW);
+    gOW = ( sWN*gSW - sWS*gNW + sWS*sWN*(qNW-qSW) )/(sWN-sWS);
+    gOE = ( sEN*gSE - sES*gNE + sES*sEN*(qNE-qSE) )/(sEN-sES);
     
     % Compute the transverse intermediate fluxes (Balsara's solution)
-    fOS = [;;;];
-    fON = [;;;];
-    gWO = [;;;];
-    gEO = [;;;];
+    fOW = [qOW(2);gOW(3)+(qOW(2)^2-qOW(3)^2)/qOW(1);qOW(3)*qOW(2)/qOW(1);qOW(2)*gOW(4)/qOW(3)];
+    fOE = [qOE(2);gOE(3)+(qOW(2)^2-qOE(3)^2)/qOE(1);qOE(3)*qOE(2)/qOE(1);qOE(2)*gOE(4)/qOE(3)];
+    gSO = [qSO(3);qSO(2)*qSO(3)/qSO(1);fSO(2)+(qSO(3)^2-qSO(2)^2)/qSO(1);qSO(3)*fSO(4)/qSO(2)];
+    gNO = [qNO(3);qNO(2)*qNO(3)/qNO(1);fNO(2)+(qNO(3)^2-qNO(2)^2)/qNO(1);qNO(3)*fNO(4)/qNO(2)];
+
     
-    % Compute the strongly interacting state q**
+    % Strongly Interacting state q**
     qOO = 1/((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW))*( ...
         (sWN*sNE+sSE*sEN)*qNE - (sEN*sNW+sSW*sWN)*qNW + ...
-        (sES*sSW+sNW*sWN)*qSW - (sWS*sSE+sNE*sES)*qSE ... 
+        (sES*sSW+sNW*sWN)*qSW - (sWS*sSE+sNE*sES)*qSE ...
         - sWN*fNE+sEN*fNW - sES*fSW+sWS*fSE - (sEN-sES)*fOE+(sWN-sWS)*fOW ...
-        - sSE*gNE+sSW*gNW - sNW*gSW+sNE*gSE - (sNE-sNW)*gNO+(sSE-sSW)*gSO);
+        - sSE*gNE+sSW*gNW - sNW*gSW+sNE*gSE - (sNE-sNW)*gNO+(sSE-sSW)*gSO );
     
-    % Compute the fluxes of the strongly interacting state: f** and g**
+    % Compute fluxes of the strongly interacting state:
     % Precompute deltas
     dq1 = sNW*sEN-sWN*sNE; df1 = sWN-sEN; dg1 = sNE-sNW;
     dq2 = sSW*sWN-sWS*sNW; df2 = sWS-sWN; dg2 = sNW-sSW;
     dq3 = sSE*sWS-sES*sSW; df3 = sES-sWS; dg3 = sSW-sSE;
     dq4 = sNE*sES-sEN*sSE; df4 = sEN-sES; dg4 = sSE-sNE;
     
-    % Using the LSQ strategy to solve an over-determined problem
+    % Using LSQ
     b1 = dq1*(qNO-qOO) + df1*fNO + dg1*gNO;
     b2 = dq2*(qOW-qOO) + df2*fOW + dg2*gOW;
     b3 = dq3*(qSO-qOO) + df3*fSO + dg3*gSO;
