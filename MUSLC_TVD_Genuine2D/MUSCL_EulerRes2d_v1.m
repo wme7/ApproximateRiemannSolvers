@@ -201,7 +201,7 @@ function HLLE = HLLE1Dflux(qL,qR,normal)
     HLLE = ( SRp*FL - SLm*FR + SLm*SRp*(qR-qL) )/(SRp-SLm);
 end
 
-function HLLE = HLLE2Dflux(qSW,qSE,qNW,qNE)
+function [HLLE] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     % Compute HLLE flux
     global gamma
     
@@ -287,7 +287,8 @@ function HLLE = HLLE2Dflux(qSW,qSE,qNW,qNE)
     sES = min([ uSE-aSE, uSE+aSE, uEroe-aEroe, uEroe+aEroe ]);
     sEN = max([ uNE-aNE, uNE+aNE, uEroe-aEroe, uEroe+aEroe ]);
     
-    % The maximum wave speed delimit the interacting region to a square domain
+    % The maximum wave speeds define a square limit for the strongly
+    % interacting region
     sS  = min(sWS,sES); 
     sN  = max(sWN,sEN); 
     sW  = min(sSW,sNW); 
