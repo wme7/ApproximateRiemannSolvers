@@ -48,7 +48,6 @@ function res = FV_WENO5HLL_1d(q,nx,dx,fluxMethod)
 %
 % WENO stencil: S{i} = [ I{i-2},...,I{i+3} ]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 global gamma
 R=3; I=R:(nx-R); % R: stencil size
 
@@ -134,16 +133,11 @@ for j = I % for all faces of the domain cells
     % compute flux at i+1/2
     %flux(:,j) = LFflux(qn(:,j-2),qp(:,j-2),gamma,smax);
     switch fluxMethod
-        case 'ROE' % Roe
-            flux(:,j) = ROEflux(qn(:,j-2),qp(:,j-2),gamma);
-        case 'RUS' % Rusanov
-            flux(:,j) = RUSflux(qn(:,j-2),qp(:,j-2),gamma);
-        case 'HLLE' % HLLE
-            flux(:,j) = HLLEflux(qn(:,j-2),qp(:,j-2),gamma);
-        case 'AUSM' % AUSM
-            flux(:,j) = AUSMflux(qn(:,j-2),qp(:,j-2),gamma);
-        case 'HLLC' % HLLC
-            flux(:,j) = HLLCflux(qn(:,j-2),qp(:,j-2),gamma);
+        case 'ROE', flux(:,j) = ROEflux(qn(:,j-2),qp(:,j-2)); % Roe
+        case 'RUS', flux(:,j) = RUSflux(qn(:,j-2),qp(:,j-2));  % Rusanov
+        case 'HLLE',flux(:,j) = HLLEflux(qn(:,j-2),qp(:,j-2)); % HLLE
+        case 'AUSM',flux(:,j) = AUSMflux(qn(:,j-2),qp(:,j-2)); % AUSM
+        case 'HLLC',flux(:,j) = HLLCflux(qn(:,j-2),qp(:,j-2)); % HLLC
     end
     % Flux contribution to the residual of every cell
     res(:, j ) = res(:, j ) + flux(:,j)/dx;
@@ -153,40 +147,30 @@ end
 % Flux contribution of the LEFT MOST FACE: left face of cell j=1.
 %flux(:,3) = LFflux(qn(:,R),qp(:,R),gamma,smax);
 switch fluxMethod
-    case 'ROE' % Roe
-        flux(:,3) = ROEflux(qn(:,3),qp(:,3),gamma);
-    case 'RUS' % Rusanov
-        flux(:,3) = RUSflux(qn(:,3),qp(:,3),gamma);
-    case 'HLLE' % HLLE
-        flux(:,3) = HLLEflux(qn(:,3),qp(:,3),gamma);
-    case 'AUSM' % AUSM
-        flux(:,3) = AUSMflux(qn(:,3),qp(:,3),gamma);
-    case 'HLLC' % HLLC
-        flux(:,3) = HLLCflux(qn(:,3),qp(:,3),gamma);
+    case 'ROE', flux(:,3) = ROEflux(qn(:,3),qp(:,3)); % Roe
+    case 'RUS', flux(:,3) = RUSflux(qn(:,3),qp(:,3)); % Rusanov
+    case 'HLLE',flux(:,3) = HLLEflux(qn(:,3),qp(:,3)); % HLLE
+    case 'AUSM',flux(:,3) = AUSMflux(qn(:,3),qp(:,3)); % AUSM
+    case 'HLLC',flux(:,3) = HLLCflux(qn(:,3),qp(:,3)); % HLLC
 end
 res(:,3) = res(:,3) - flux(:,3)/dx;
  
 % Flux contribution of the RIGHT MOST FACE: right face of cell j=nx-1.
 %flux(:,nx-2) = LFflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R),gamma,smax);
 switch fluxMethod
-    case 'ROE' % Roe
-        flux(:,nx-2) = ROEflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R),gamma);
-    case 'RUS' % Rusanov
-        flux(:,nx-2) = RUSflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R),gamma);
-    case 'HLLE' % HLLE
-        flux(:,nx-2) = HLLEflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R),gamma);
-    case 'AUSM' % AUSM
-        flux(:,nx-2) = AUSMflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R),gamma);
-    case 'HLLC' % HLLC
-        flux(:,nx-2) = HLLCflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R),gamma);
+    case 'ROE', flux(:,nx-2) = ROEflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R)); % Roe
+    case 'RUS', flux(:,nx-2) = RUSflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R)); % Rusanov
+    case 'HLLE',flux(:,nx-2) = HLLEflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R)); % HLLE
+    case 'AUSM',flux(:,nx-2) = AUSMflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R)); % AUSM
+    case 'HLLC',flux(:,nx-2) = HLLCflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R)); % HLLC
 end
 res(:,nx-2) = res(:,nx-2) + flux(:,nx-2)/dx;
 
 end % FVM WENO
 
-function Roe = ROEflux(qL,qR,gamma)
+function Roe = ROEflux(qL,qR)
     % Roe flux function
-    %
+    global gamma
     
     % Left state
     rL = qL(1);
@@ -241,8 +225,9 @@ function Roe = ROEflux(qL,qR,gamma)
     Roe = ( FL + FR  - R*(ws.*dV))/2;
 end
 
-function Rusanov = RUSflux(qL,qR,gamma)
+function Rusanov = RUSflux(qL,qR)
     % Rusanov flux 
+    global gamma
     
     % Left state
     rL = qL(1);
@@ -273,11 +258,12 @@ function Rusanov = RUSflux(qL,qR,gamma)
     smax = abs(u)+a;     Rusanov = ( FR + FL + smax*(qL-qR) )/2;
 end
 
-function AUSM = AUSMflux(qL,qR,gamma)
+function AUSM = AUSMflux(qL,qR)
     % AUSM numerical flux
     %
     % M.-S. Liou and C. J. Steffen, A New Flux Splitting Scheme, Journal of
     % Computational Physics, 107, pp. 23-39, 1993.
+    global gamma
 
     % Left state
     rL = qL(1);
@@ -333,8 +319,9 @@ function AUSM = AUSMflux(qL,qR,gamma)
     AUSM = Fp + Fm;
 end
 
-function HLLE = HLLEflux(qL,qR,gamma)
+function HLLE = HLLEflux(qL,qR)
     % Compute HLLE flux
+    global gamma
 
     % Left state
     rL = qL(1);
@@ -383,8 +370,9 @@ function HLLE = HLLEflux(qL,qR,gamma)
     end
 end
 
-function HLLC = HLLCflux(qL,qR,gamma)
+function HLLC = HLLCflux(qL,qR)
     % Compute HLLC flux
+    global gamma
 
     % Left state
     rL = qL(1);

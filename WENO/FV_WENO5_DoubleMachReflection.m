@@ -30,8 +30,8 @@ global gamma
 %% Parameters
 CFL     = 0.30;     % CFL number
 tEnd    = 0.25;     % Final time
-nx      = 100;      % Number of cells/Elements in x
-ny      = 100;      % Number of cells/Elements in y
+nx      = 240;      % Number of cells/Elements in x
+ny      = 60;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
 fluxMth ='HLLE';	% LF, RUS, ROE, HLLE, HLLC.
@@ -41,12 +41,12 @@ plotFig = true;     % Visualize evolution of domain
 gamma=(n+2)/n;
 
 % Discretize spatial domain
-Lx=1; dx=Lx/nx; xc=dx/2:dx:Lx;
+Lx=4; dx=Lx/nx; xc=dx/2:dx:Lx;
 Ly=1; dy=Ly/ny; yc=dy/2:dy:Ly;
 [x,y] = meshgrid(xc,yc);
 
 % Set IC
-[r0,u0,v0,p0] = Euler_IC2d(x,y,IC);
+[r0,u0,v0,p0,preshock,postshock] = Euler_DoubleMachReflection_IC2d(nx,ny);
 E0 = p0./((gamma-1)*r0)+0.5*(u0.^2+v0.^2);  % Total Energy
 c0 = sqrt(gamma*p0./r0);                    % Speed of sound
 Q0 = cat(3, r0, r0.*u0, r0.*v0, r0.*E0);    % initial state
@@ -90,26 +90,26 @@ while t < tEnd
     % 1st stage
     dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=qo-dt*dF;
    
-    q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
-    q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
-    q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
-    q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
+    %q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
+    %q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
+    %q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
+    %q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
     
     % 2nd Stage
     dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=0.75*qo+0.25*(q-dt*dF);
     
-	q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
-    q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
-    q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
-    q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
+	%q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
+    %q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
+    %q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
+    %q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
     
     % 3rd stage
     dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=(qo+2*(q-dt*dF))/3;
     
-	q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
-    q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
-    q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
-    q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
+	%q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
+    %q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
+    %q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
+    %q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
     
 	% Compute flow properties
     r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r;
