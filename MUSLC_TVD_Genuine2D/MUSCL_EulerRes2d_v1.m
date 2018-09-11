@@ -206,7 +206,7 @@ end
 function [fOO,gOO] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     % Compute HLLE flux
     global gamma
-    
+
     % West state
     rSW = qSW(1);
     uSW = qSW(2)/rSW;
@@ -214,7 +214,7 @@ function [fOO,gOO] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     pSW = (gamma-1)*( qSW(4) - rSW*(uSW^2+vSW^2)/2 );
     aSW = sqrt(gamma*pSW/rSW);
     HSW = ( qSW(4) + pSW ) / rSW;
-    
+
     % East state
     rSE = qSE(1);
     uSE = qSE(2)/rSE;
@@ -222,15 +222,15 @@ function [fOO,gOO] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     pSE = (gamma-1)*( qSE(4) - rSE*(uSE^2+vSE^2)/2 );
     aSE = sqrt(gamma*pSE/rSE);
     HSE = ( qSE(4) + pSE ) / rSE;
-    
+
     % South state
     rNW = qNW(1);
     uNW = qNW(2)/rNW;
     vNW = qNW(3)/rNW;
-    pNW = (gamma-1)*( qNW(4) - rSW*(uNW^2+vNW^2)/2 );
+    pNW = (gamma-1)*( qNW(4) - rNW*(uNW^2+vNW^2)/2 );
     aNW = sqrt(gamma*pNW/rNW);
     HNW = ( qNW(4) + pNW ) / rNW;
-    
+
     % North state
     rNE = qNE(1);
     uNE = qNE(2)/rNE;
@@ -238,56 +238,56 @@ function [fOO,gOO] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     pNE = (gamma-1)*( qNE(4) - rNE*(uNE^2+vNE^2)/2 );
     aNE = sqrt(gamma*pNE/rNE);
     HNE = ( qNE(4) + pNE ) / rNE;
-    
-    
-    
-    
+
+
+
+
     % Compute Roe Averages - SW to SE
-    rSroe = sqrt(rSE/rSW); 
+    rSroe = sqrt(rSE/rSW);
     uSroe = (uSW+rSroe*uSE)/(1+rSroe);
     vSroe = (vSW+rSroe*vSE)/(1+rSroe);
     HSroe = (HSW+rSroe*HSE)/(1+rSroe);
     aSroe = sqrt( (gamma-1)*(HSroe-0.5*(uSroe^2+vSroe^2)) );
-    
+
     % Compute Roe Averages - NW to NE
-    rNroe = sqrt(rNE/rNW); 
+    rNroe = sqrt(rNE/rNW);
     uNroe = (uNW+rNroe*uNE)/(1+rNroe);
     vNroe = (vNW+rNroe*vNE)/(1+rNroe);
     HNroe = (HNW+rNroe*HNE)/(1+rNroe);
     aNroe = sqrt( (gamma-1)*(HNroe-0.5*(uNroe^2+vNroe^2)) );
-    
+
     % Compute Roe Averages - SW to NW
-    rWroe = sqrt(rSE/rSW); 
-    uWroe = (uSW+rWroe*uSE)/(1+rWroe);
-    vWroe = (vSW+rWroe*vSE)/(1+rWroe);
-    HWroe = (HSW+rWroe*HSE)/(1+rWroe);
+    rWroe = sqrt(rNW/rSW);
+    uWroe = (uSW+rWroe*uNW)/(1+rWroe);
+    vWroe = (vSW+rWroe*vNW)/(1+rWroe);
+    HWroe = (HSW+rWroe*HNW)/(1+rWroe);
     aWroe = sqrt( (gamma-1)*(HWroe-0.5*(uWroe^2+vWroe^2)) );
-    
+
     % Compute Roe Averages - SE to NE
-    rEroe = sqrt(rNE/rSE); 
+    rEroe = sqrt(rNE/rSE);
     uEroe = (uSE+rEroe*uNE)/(1+rEroe);
     vEroe = (vSE+rEroe*vNE)/(1+rEroe);
     HEroe = (HSE+rEroe*HNE)/(1+rEroe);
     aEroe = sqrt( (gamma-1)*(HEroe-0.5*(uEroe^2+vEroe^2)) );
-    
-    
-    
-    
+
+
+
+
     % Wave speed estimates in the S
     sSW = min([ uSW-aSW, uSW+aSW, uSroe-aSroe, uSroe+aSroe ]);
     sSE = max([ uSE-aSE, uSE+aSE, uSroe-aSroe, uSroe+aSroe ]);
-    
+
     % Wave speed estimates in the N
     sNW = min([ uNW-aNW, uNW+aNW, uNroe-aNroe, uNroe+aNroe ]);
     sNE = max([ uNE-aNE, uNE+aNE, uNroe-aNroe, uNroe+aNroe ]);
-    
+
     % Wave speed estimates in the W
-    sWS = min([ uSW-aSW, uSW+aSW, uWroe-aWroe, uWroe+aWroe ]);
-    sWN = max([ uNW-aNW, uNW+aNW, uWroe-aWroe, uWroe+aWroe ]);
-    
+    sWS = min([ vSW-aSW, vSW+aSW, vWroe-aWroe, vWroe+aWroe ]);
+    sWN = max([ vNW-aNW, vNW+aNW, vWroe-aWroe, vWroe+aWroe ]);
+
     % Wave speed estimates in the E
-    sES = min([ uSE-aSE, uSE+aSE, uEroe-aEroe, uEroe+aEroe ]);
-    sEN = max([ uNE-aNE, uNE+aNE, uEroe-aEroe, uEroe+aEroe ]);
+    sES = min([ vSE-aSE, vSE+aSE, vEroe-aEroe, vEroe+aEroe ]);
+    sEN = max([ vNE-aNE, vNE+aNE, vEroe-aEroe, vEroe+aEroe ]);
     
  
 
@@ -295,39 +295,39 @@ function [fOO,gOO] = HLLE2Dflux(qSW,qSE,qNW,qNE)
     % Compute fluxes
     fSW = [rSW*uSW; rSW*uSW*uSW + pSW; rSW*vSW*uSW; rSW*uSW*HSW];
     fSE = [rSE*uSE; rSE*uSE*uSE + pSE; rSE*vSE*uSE; rSE*uSE*HSE];
-    fNW = [rNE*uNE; rNE*uNE*uNE + pNE; rNE*vNE*uNE; rNE*uNE*HNE];
+    fNW = [rNW*uNW; rNW*uNW*uNW + pNW; rNW*vNW*uNW; rNW*uNW*HNW];
     fNE = [rNE*uNE; rNE*uNE*uNE + pNE; rNE*vNE*uNE; rNE*uNE*HNE];
-    
+
     gSW = [rSW*vSW; rSW*vSW*uSW; rSW*vSW*vSW + pSW; rSW*vSW*HSW];
     gSE = [rSE*vSE; rSE*vSE*uSE; rSE*vSE*vSE + pSE; rSE*vSE*HSE];
     gNW = [rNW*vNW; rNW*vNW*uNW; rNW*vNW*vNW + pNW; rNW*vNW*HNW];
     gNE = [rNE*vNE; rNE*vNE*uNE; rNE*vNE*vNE + pNE; rNE*vNE*HNE];
-    
+
     % Compute the intermediate states
     qSO = ( sSE*qSE - sSW*qSW + fSW-fSE )/(sSE-sSW);
     qNO = ( sNE*qNE - sNW*qNW + fNW-fNE )/(sNE-sNW);
     qOW = ( sWN*qNW - sWS*qSW + gSW-gNW )/(sWN-sWS);
     qOE = ( sEN*qNE - sES*qSE + gSE-gNE )/(sEN-sES);
-    
+
     % Compute the intermediate states fluxes (normal HLLE 1d fluxes)
     fSO = ( sSE*fSW - sSW*fSE + sSW*sSE*(qSE-qSW) )/(sSE-sSW);
     fNO = ( sNE*fNW - sNW*fNE + sNW*sNE*(qNE-qNW) )/(sNE-sNW);
     gOW = ( sWN*gSW - sWS*gNW + sWS*sWN*(qNW-qSW) )/(sWN-sWS);
     gOE = ( sEN*gSE - sES*gNE + sES*sEN*(qNE-qSE) )/(sEN-sES);
-    
+
     % Compute the transverse intermediate fluxes (Balsara's solution)
     fOW = [qOW(2);gOW(3)+(qOW(2)^2-qOW(3)^2)/qOW(1);qOW(3)*qOW(2)/qOW(1);qOW(2)*gOW(4)/qOW(3)];
-    fOE = [qOE(2);gOE(3)+(qOW(2)^2-qOE(3)^2)/qOE(1);qOE(3)*qOE(2)/qOE(1);qOE(2)*gOE(4)/qOE(3)];
+    fOE = [qOE(2);gOE(3)+(qOE(2)^2-qOE(3)^2)/qOE(1);qOE(3)*qOE(2)/qOE(1);qOE(2)*gOE(4)/qOE(3)];
     gSO = [qSO(3);qSO(2)*qSO(3)/qSO(1);fSO(2)+(qSO(3)^2-qSO(2)^2)/qSO(1);qSO(3)*fSO(4)/qSO(2)];
     gNO = [qNO(3);qNO(2)*qNO(3)/qNO(1);fNO(2)+(qNO(3)^2-qNO(2)^2)/qNO(1);qNO(3)*fNO(4)/qNO(2)];
 
     
     % Strongly Interacting state q**
-    qOO = 1/((sNE-sSW)*(sWN-sES)+(sNE-sWS)*(sSE-sNW))*( ...
-        (sWN*sNE+sSE*sEN)*qNE - (sEN*sNW+sSW*sWN)*qNW + ...
-        (sES*sSW+sNW*sWN)*qSW - (sWS*sSE+sNE*sES)*qSE ...
-        - sWN*fNE+sEN*fNW - sES*fSW+sWS*fSE - (sEN-sES)*fOE+(sWN-sWS)*fOW ...
-        - sSE*gNE+sSW*gNW - sNW*gSW+sNE*gSE - (sNE-sNW)*gNO+(sSE-sSW)*gSO );
+    qOO = 1/((sNE-sSW)*(sWN-sES)+(sEN-sWS)*(sSE-sNW))*( ...
+         (sWN*sNE+sSE*sEN)*qNE - (sEN*sNW+sSW*sWN)*qNW + ...
+         (sES*sSW+sNW*sWN)*qSW - (sWS*sSE+sNE*sES)*qSE ...
+       - sWN*fNE+sEN*fNW - sES*fSW+sWS*fSE - (sEN-sES)*fOE+(sWN-sWS)*fOW ...
+       - sSE*gNE+sSW*gNW - sNW*gSW+sNE*gSE - (sNE-sNW)*gNO+(sSE-sSW)*gSO );
     
     % Compute fluxes of the strongly interacting state:
     % Precompute deltas
