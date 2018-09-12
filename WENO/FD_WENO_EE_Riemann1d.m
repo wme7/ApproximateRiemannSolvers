@@ -51,14 +51,14 @@ plotFig = true;
 a=0; b=1; dx=(b-a)/nE; nx=nE+1; x=linspace(a,b,nx);
 
 % Set IC
-[rho0,u0,p0] = Euler_Riemann_IC1d(x,IC);
-E0 = p0./((gamma-1)*rho0)+0.5*u0.^2;  % Total Energy density
-a0 = sqrt(gamma*p0./rho0);            % Speed of sound
-q0=[rho0; rho0.*u0; rho0.*E0];        % vec. of conserved properties
+[r0,u0,p0] = Euler_Riemann_IC1d(x,IC);
+E0 = p0./((gamma-1))+0.5*r0.*u0.^2;  % Total Energy density
+a0 = sqrt(gamma*p0./r0);   % Speed of sound
+q0=[r0; r0.*u0; E0];   % vec. of conserved properties
 
 % Exact solution
-[xe,rhoe,ue,pe,ee,te,Me,se] = ...
-   EulerExact(rho0(1),u0(1),p0(1),rho0(nx),u0(nx),p0(nx),tFinal,gamma);
+[xe,re,ue,pe,ee,te,Me,se] = ...
+   EulerExact(r0(1),u0(1),p0(1),r0(nx),u0(nx),p0(nx),tFinal);
 
 % Discretize time domain
 lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;  % using the system's largest eigenvalue
@@ -69,35 +69,37 @@ q=q0; it=0; dt=dt0; t=0; lambda=lambda0;
 
 %% Solver Loop
 while t<tFinal
+    % Iteration local time
+    if t+dt>tFinal; dt=tFinal-t; end; t=t+dt;
  
     % RK Initial step
     qo = q;
     
     % 1st stage
-    dF=FD_WENO5_EE1d(lambda,q,dx,fsplit);	q = qo-dt*dF; 
+    dF=FD_WENO_EE1d(lambda,q,dx,fsplit);	q = qo-dt*dF; 
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
     
     % 2nd Stage
-    dF=FD_WENO5_EE1d(lambda,q,dx,fsplit);	q = 0.75*qo+0.25*(q-dt*dF);
+    dF=FD_WENO_EE1d(lambda,q,dx,fsplit);	q = 0.75*qo+0.25*(q-dt*dF);
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
 
     % 3rd stage
-    dF=FD_WENO5_EE1d(lambda,q,dx,fsplit);	q = (qo+2*(q-dt*dF))/3;
+    dF=FD_WENO_EE1d(lambda,q,dx,fsplit);	q = (qo+2*(q-dt*dF))/3;
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
    
     % compute primary properties
-    rho=q(1,:); u=q(2,:)./rho; E=q(3,:)./rho; p=(gamma-1)*rho.*(E-0.5*u.^2);
-    a=sqrt(gamma*p./rho); if min(p)<0; error('negative pressure found!'); end
+    r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2);
+    a=sqrt(gamma*p./r); if min(p)<0; error('negative pressure found!'); end
     
-    % Update dt and time
-    lambda=max(abs(u)+a); dt=CFL*dx/lambda; if t+dt>tFinal; dt=tFinal-t; end
+    % Update time step, dt
+    lambda=max(abs(u)+a); dt=CFL*dx/lambda; 
     
-    % Update time and iteration counter
-	t=t+dt; it=it+1;
+    % Update iteration counter
+	it=it+1;
     
     % Plot figure
     if plotFig && rem(it,10) == 0
-        subplot(2,2,1); plot(x,rho,'.b');
+        subplot(2,2,1); plot(x,r,'.b');
         subplot(2,2,2); plot(x,u,'.m');
         subplot(2,2,3); plot(x,p,'.k');
         subplot(2,2,4); plot(x,E,'.r');
@@ -105,22 +107,24 @@ while t<tFinal
     end
 end
 
+%% Post-process
+
 % Calculation of flow parameters
-a = sqrt(gamma*p./rho); M = u./a; % Mach number [-]
-p_ref = 101325;             % Reference air pressure (N/m^2)
-rho_ref= 1.225;             % Reference air density (kg/m^3)
-s = 1/(gamma-1)*(log(p/p_ref)+gamma*log(rho_ref./rho)); 
-                            % Entropy w.r.t reference condition
-ss = log(p./rho.^gamma);    % Dimensionless Entropy
-Q = rho.*u;                 % Mass Flow rate per unit area
-e = p./((gamma-1)*rho);     % internal Energy
+a = sqrt(gamma*p./r); M = u./a; % Mach number [-]
+p_ref = 101325;           % Reference air pressure (N/m^2)
+r_ref = 1.225;            % Reference air density (kg/m^3)
+s_ref = 1/(gamma-1)*(log(p/p_ref)+gamma*log(r_ref./r)); 
+                          % Entropy w.r.t reference condition
+s = log(p./r.^gamma);     % Dimensionless Entropy
+Q = r.*u;                 % Mass Flow rate per unit area
+e = p./((gamma-1)*r);     % internal Energy
 
 %% Final plot
 offset=0.05;
-s1=subplot(2,3,1); plot(x,rho,'or',xe,rhoe,'k'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
+s1=subplot(2,3,1); plot(x,r,'or',xe,re,'k'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
 s2=subplot(2,3,2); plot(x,u,'or',xe,ue,'k'); xlabel('x(m)'); ylabel('Velocity (m/s)');
 s3=subplot(2,3,3); plot(x,p,'or',xe,pe,'k'); xlabel('x(m)'); ylabel('Pressure (Pa)');
-s4=subplot(2,3,4); plot(x,ss,'or',xe,se,'k'); xlabel('x(m)'); ylabel('Entropy/R gas');
+s4=subplot(2,3,4); plot(x,s,'or',xe,se,'k'); xlabel('x(m)'); ylabel('Entropy/R gas');
 s5=subplot(2,3,5); plot(x,M,'or',xe,Me,'k'); xlabel('x(m)'); ylabel('Mach number');
 s6=subplot(2,3,6); plot(x,e,'or',xe,ee,'k'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,['WENO5-',fsplit,' Euler solver']);
+title(s1,['FD-WENO5-',fsplit,' Euler solver']);

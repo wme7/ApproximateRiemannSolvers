@@ -1,4 +1,4 @@
-function [r0,u0,v0,p0,preshock,postshock] = Euler_DoubleMachReflection_IC2d(nx,ny)
+function [r0,u0,v0,p0,preshock,postshock,shockSpeed] = Euler_DoubleMachReflection_IC2d(nx,ny)
     % Load the IC of a classical Double Mach Reflection test problem.
     %
     %  r = rho/gas density
@@ -42,7 +42,7 @@ function [r0,u0,v0,p0,preshock,postshock] = Euler_DoubleMachReflection_IC2d(nx,n
     u2 = Ms*(1-((gamma-1)*Ms^2 + 2)/((gamma+1)*Ms^2))*c1*cos(pi/6);
     v2 = Ms*(1-((gamma-1)*Ms^2 + 2)/((gamma+1)*Ms^2))*c1*sin(pi/6);
     E2 = p2./((gamma-1))+0.5*r2*(u2.^2+v2.^2);
-    postshock = [r2,r2*u2,r2*v2,E2];
+    postshock = [r2,r2*u2,r2*v2,E2]; shockSpeed=u2;
 
     % build grid
     dx=4/nx; dy=1/ny; [x,y]=meshgrid(dx/2:dx:4,dy/2:dy:1);

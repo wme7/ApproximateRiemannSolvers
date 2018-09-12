@@ -1,4 +1,4 @@
-function res = FD_WENO5_EE1d(a,w,dx,fsplitMth)
+function res = FD_WENO_EE1d(a,w,dx,fsplitMth)
 % *************************************************************************
 % Coded by Manuel A. Diaz, 02.10.2012, NTU Taiwan.
 % Last update on 2016.04.29, NHRI Taiwan.

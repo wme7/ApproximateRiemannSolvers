@@ -1,4 +1,4 @@
-function res = FV_charWise_WENO5_EE1d(a,q,~,dx)
+function res = FV_charWise_WENO5_EE1d(q,a,~,dx)
 % *************************************************************************
 %
 %    Characteristic-wise Finite Volume-1d for the Euler Equations 
@@ -135,7 +135,7 @@ for ip=1:E
     for m2 = -2:2
        for  i = R+1:N-2
           qs(m2+3,i) = 0;
-          for e=1:E 
+          for e=1:E      
             qs(m2+3,i) = qs(m2+3,i) + evl(ip,e,i)*dqmh(e,i+m2);
           end
        end

@@ -1,6 +1,6 @@
-function res = FV_WENO5_EE2d(q,smax,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
+function res = FV_WENO_EE2d(q,smax,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
 % Compute RHS of the semi-discrete form of the Euler equations.
-global gamma preshock postshock mesh_wedge_position
+global gamma preshock postshock mesh_wedge_position shock_speed
 
 %   Flux at j+1/2
 % 
@@ -27,7 +27,6 @@ end
 
 switch Test
     case 'Riemann' % Set outflow BCs
-        % Static BCs
         for i=1:R-1
             q(:,i,:)=q(:,R,:); q(:,nx+1-i,:)=q(:,nx+1-R,:);	% Neumann BCs
         end
@@ -51,7 +50,7 @@ switch Test
                 q(3,j,3)=-q(3,j,3); % EE reflective BC
             end
         end
-        % Time dependent BCs at the top of domain
+        % Time dependent BCs at the top of domain: moving shock
         for j=3:nx-2
 %             if j<0
 %                 q(1,j,:)=postshock; % Dirichlet BCs

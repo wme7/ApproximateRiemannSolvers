@@ -33,14 +33,14 @@ plot_fig= 1;
 Lx=1; dx=Lx/nx; xc=dx/2:dx:Lx;
 
 % Set IC
-[r0,u0,p0] = Euler_IC1d(xc,IC);
+[r0,u0,p0] = Euler_Riemann_IC1d(xc,IC);
 E0 = p0./((gamma-1)*r0)+0.5*u0.^2;  % Total Energy density
 a0 = sqrt(gamma*p0./r0);            % Speed of sound
 q0=[r0; r0.*u0; r0.*E0];        % vec. of conserved properties
 
 % Exact solution
 [xe,re,ue,pe,ee,te,Me,se] = ...
-   EulerExact(r0(1),u0(1),p0(1),r0(nx),u0(nx),p0(nx),tFinal,gamma);
+   EulerExact(r0(1),u0(1),p0(1),r0(nx),u0(nx),p0(nx),tFinal);
 Ee = pe./((gamma-1)*re)+0.5*ue.^2;
 
 % Adjust grid for ghost cells
@@ -63,17 +63,17 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    dF=FV_WENO5LF_1d(q,max(lambda(:)),nx,dx);     q = qo-dt*dF;
+    L=FV_charWise_WENO5_EE1d(q,max(lambda(:)),nx,dx);	q = qo-dt*L;
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
     % 2nd Stage
-    dF=FV_WENO5LF_1d(q,max(lambda(:)),nx,dx);     q = 0.75*qo+0.25*(q-dt*dF);
+    L=FV_charWise_WENO5_EE1d(q,max(lambda(:)),nx,dx);	q = 0.75*qo+0.25*(q-dt*L);
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
     % 3rd stage
-    dF=FV_WENO5LF_1d(q,max(lambda(:)),nx,dx);     q = (qo+2*(q-dt*dF))/3;
+    L=FV_charWise_WENO5_EE1d(q,max(lambda(:)),nx,dx);	q = (qo+2*(q-dt*L))/3;
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
@@ -102,10 +102,24 @@ q=q(:,3:nx-2); nx=nx-4;
 % compute flow properties
 r=q(1,:); u=q(2,:)./r; E=q(3,:)./r; p=(gamma-1)*r.*(E-0.5*u.^2);
 
+%% Post-process
+
+% Calculation of flow parameters
+a = sqrt(gamma*p./r); M = u./a; % Mach number [-]
+p_ref = 101325;             % Reference air pressure (N/m^2)
+r_ref = 1.225;              % Reference air density (kg/m^3)
+s_ref = 1/(gamma-1)*(log(p/p_ref)+gamma*log(r_ref./r)); 
+                            % Entropy w.r.t reference condition
+s = log(p./r.^gamma);     % Dimensionless Entropy
+Q = r.*u;                   % Mass Flow rate per unit area
+e = p./((gamma-1)*r);       % internal Energy
+
 % Plots results
 figure(1);
-subplot(2,2,1); plot(xc,r,'ro',xe,re,'-k'); xlabel('x'); ylabel('\rho'); legend('WENO-LF','Exact'); 
-title('SSP-RK3 FV-WENO-LF Euler Eqns.')
-subplot(2,2,2); plot(xc,u,'ro',xe,ue,'-k'); xlabel('x'); ylabel('u'); 
-subplot(2,2,3); plot(xc,p,'ro',xe,pe,'-k'); xlabel('x'); ylabel('p'); 
-subplot(2,2,4); plot(xc,E,'ro',xe,Ee,'-k'); xlabel('x'); ylabel('E'); 
+s1=subplot(2,3,1); plot(xc,r,'or',xe,re,'k'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
+s2=subplot(2,3,2); plot(xc,u,'or',xe,ue,'k'); xlabel('x(m)'); ylabel('Velocity (m/s)');
+s3=subplot(2,3,3); plot(xc,p,'or',xe,pe,'k'); xlabel('x(m)'); ylabel('Pressure (Pa)');
+s4=subplot(2,3,4); plot(xc,s,'or',xe,se,'k'); xlabel('x(m)'); ylabel('Entropy/R gas');
+s5=subplot(2,3,5); plot(xc,M,'or',xe,Me,'k'); xlabel('x(m)'); ylabel('Mach number');
+s6=subplot(2,3,6); plot(xc,e,'or',xe,ee,'k'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
+title(s1,'FV-WENO-RK-CharWise Euler solver');

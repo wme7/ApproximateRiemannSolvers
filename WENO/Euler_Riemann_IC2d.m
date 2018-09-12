@@ -1,6 +1,6 @@
 function [r_0,u_0,v_0,p_0] = Euler_Riemann_IC2d(x,y,input)
-% Load the IC of a 1D Riemann classical schok tube problem configuration. 
-% In the notation we take advantage of the matlab array notation as follows
+% Load the IC of a 2D Riemann problems configurations.
+% Following the standard convention for denoting subregions:
 %
 %   1.0 +-----------+-----------+
 %       |           |           |       
@@ -13,14 +13,18 @@ function [r_0,u_0,v_0,p_0] = Euler_Riemann_IC2d(x,y,input)
 %   0.0 +-----------+-----------+
 %      0.0         0.5         1.0
 %
-% prop = [prop_reg1 , prop_reg2 , prop_reg3 , prop_reg4]
+% *But in the code they will be organized as:
+%
+%        prop = [prop_reg1 , prop_reg2 , prop_reg3 , prop_reg4], 
+%
+% with the following primite properties:
 %
 %   r = rho/density
 %   u = velocity in x direction
 %   v = velocity in y direction
-%   p = Pressure
+%   p = pressure
 %
-% Manuel Diaz, NTU, 2014.06.27
+% Manuel A. Diaz, NTU, 2013.01.27
 
 %% Initial Physical Properties per case:
 switch input

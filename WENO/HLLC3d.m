@@ -9,6 +9,8 @@ function HLLC3d(wL,wR,kas,kbs,Lab,ddt,GI)
 % ddt spectral radius of the Jacobian matrix \f$ \rho(\mathbf{A})\f$
 % GI  interface flux \f$ \mathbf{F}_{c}  \f$
 
+% Implementation incomplete ;P
+
 % -1>unify
 absN=sqrt(n(0)*n(0)+n(1)*n(1)+n(2)*n(2));
 if(fabs(absN-Lab)>1e-6)

@@ -1,13 +1,11 @@
 function res = FV_WENO5LF_1d(q,smax,nx,dx)
 % *************************************************************************
-% Input: u(i) = [u(i-2) u(i-1) u(i) u(i+1) u(i+2)];
-% Output: res = df/dx;
 %
 % Based on:
 % C.W. Shu's Lectures notes on: 'ENO and WENO schemes for Hyperbolic
 % Conservation Laws' 
 %
-% coded by Manuel Diaz, 02.10.2012, NTU Taiwan.
+% coded by Manuel A. Diaz, 02.10.2012, NTU Taiwan.
 % last update on 2016.04.29, NHRI Taiwan.
 % *************************************************************************
 %

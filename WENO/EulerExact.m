@@ -1,4 +1,4 @@
-function [x,rho,ux,p,e,t,Mach,entro]=EulerExact(rho1,u1,p1,rho4,u4,p4,tEnd,gamma)
+function [x,rho,ux,p,e,t,Mach,entro]=EulerExact(rho1,u1,p1,rho4,u4,p4,tEnd)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Classical Gas Exact Riemann Solver 
 % Coded by Manuel Diaz, IAM, NTU 03.09.2011.
@@ -23,6 +23,7 @@ function [x,rho,ux,p,e,t,Mach,entro]=EulerExact(rho1,u1,p1,rho4,u4,p4,tEnd,gamma
 %   rho4, u4, p4
 % 'tEnd' and 'n' are the final solution time and the gas DoFs.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+global gamma
 
 % Gamma values
 alpha=(gamma+1)/(gamma-1);
