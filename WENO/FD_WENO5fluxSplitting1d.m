@@ -1,4 +1,4 @@
-function res = WENO5LF1d(a,w,dx)
+function res = FD_WENO5fluxSplitting1d(a,w,dx,fsplitMth)
 % *************************************************************************
 % Input: u(i) = [u(i-2) u(i-1) u(i) u(i+1) u(i+2)];
 % Output: res = df/dx;
@@ -51,14 +51,18 @@ function res = WENO5LF1d(a,w,dx)
 % Careful!: by using circshift over our domain, we are implicitly creating a
 % favorable code that automatically includes periodical boundary conditions.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Lax-Friedrichs (LF) Flux Splitting
-[v,u] = LF(a,w);
+% Produce flux splitting 
+switch fsplitMth
+    case 'LF',  [v,u] = LF(a,w);    % Lax-Friedrichs (LF) Flux Splitting
+    case 'RUS', [v,u] = Rusanov(w); % Rusanov (Rus) Flux Splitting
+    case 'SHLL',[v,u] = SHLL(w);    % Split HLL (SHLL) flux 
+    otherwise, error('Splitting method not set.');
+end
 
-%% Right Flux
-% Choose the positive fluxes, 'v', to compute the left cell boundary flux:
-% $u_{i+1/2}^{-}$
+%% Left flux reconstruction $f_{i+1/2}^{-}$
 vmm = circshift(v,[0 2]);
 vm  = circshift(v,[0 1]);
+%v  = circshift(v,[0 0]);
 vp  = circshift(v,[0 -1]);
 vpp = circshift(v,[0 -2]);
 
@@ -89,11 +93,10 @@ w2n = alpha2n./alphasumn;
 % Numerical Flux at cell boundary, $u_{i+1/2}^{-}$;
 hn = w0n.*p0n + w1n.*p1n + w2n.*p2n;
 
-%% Left Flux 
-% Choose the negative fluxes, 'u', to compute the left cell boundary flux:
-% $u_{i-1/2}^{+}$ 
+%% Right flux reconstruction $f_{i+1/2}^{+}$ 
 umm = circshift(u,[0 2]);
 um  = circshift(u,[0 1]);
+%u  = circshift(u,[0 0]);
 up  = circshift(u,[0 -1]);
 upp = circshift(u,[0 -2]);
 
@@ -128,8 +131,45 @@ hp = w0p.*p0p + w1p.*p1p + w2p.*p2p;
 res = (hp-circshift(hp,[0,1])+hn-circshift(hn,[0,1]))/dx;
 end
 
-% Compute flux vector splitting 
-function [v,u] = LF(a,q)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Flux splitting functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Lax-Friedrichs
+function [Fp,Fm] = LF(a,q)
+    global gamma
+    
+    % primary properties
+    rho=q(1,:); Fm=q(2,:)./rho; E=q(3,:)./rho; 
+    p=(gamma-1)*rho.*(E-0.5*Fm.^2);
+    
+    % flux vector of conserved properties
+    F=[rho.*Fm; rho.*Fm.^2+p; Fm.*(rho.*E+p)];
+    
+    % Lax-Friedrichs flux
+    Fp=          0.5*(F + a*q); 
+    Fm=circshift(0.5*(F - a*q),[0,-1]); 
+end
+
+% Rusanov (or local Lax-Friedrichs)
+function [Fp,Fm] = Rusanov(q)
+    global gamma
+    
+    % primary properties
+    rho=q(1,:); u=q(2,:)./rho; E=q(3,:)./rho; 
+    p=(gamma-1)*rho.*(E-0.5*u.^2); a=sqrt(gamma*p./rho); 
+    
+    % flux vector of conserved properties
+    F=[rho.*u; rho.*u.^2+p; u.*(rho.*E+p)];
+    
+    % positive and negative fluxes
+    I=ones(3,1); % I = [1;1;1;] column vector
+    Fp=          0.5*(F + I*a.*q); 
+    Fm=circshift(0.5*(F - I*a.*q),[0,-1]); 
+end
+
+% Splitted HLL flux form Ref.[2]:
+function [Fp,Fm] = SHLL(q)
     global gamma
     
     % primary properties
@@ -139,7 +179,17 @@ function [v,u] = LF(a,q)
     % flux vector of conserved properties
     F=[rho.*u; rho.*u.^2+p; u.*(rho.*E+p)];
     
-    % Lax-Friedrichs flux
-    v=          0.5*(F + a*q); 
-    u=circshift(0.5*(F - a*q),[0,-1]); 
+    % Mach number
+    a=sqrt(gamma*p./rho); M = u./a; 
+    
+    % Produce corrections to Mach number
+    M(M> 1)= 1; 
+    M(M<-1)=-1;
+    M2 = M.^2;
+    
+    % constant column vector [1;1;1]
+    I = ones(3,1);
+    
+    Fp=           0.5*((I*(M+1)).*F + I*(a.*(1-M2)).*q); 
+    Fm=circshift(-0.5*((I*(M-1)).*F + I*(a.*(1-M2)).*q),[0,-1]); 
 end

@@ -22,8 +22,13 @@
 %
 % coded by Manuel A. Diaz, 2012.12.27. Last modif: 29.04.2016.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Ref: C.-W. Shu, High order weighted essentially non-oscillatory schemes
-% for convection dominated problems, SIAM Review, 51:82-126, (2009). 
+% Refs: 
+% [1] C.-W. Shu, High order weighted essentially non-oscillatory schemes
+%     for convection dominated problems, SIAM Review, 51:82-126, (2009). 
+% [2] F.-A. Kuo, M.R. Smith, C.-W. Hsieh, C.-Y. Chou and J.-S. Wu, GPU
+%     acceleration for general conservation equations and its application
+%     to several engineering problems, Computers and Fluids,
+%     45[1]:pp.147-154,2011. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes: 
 % 1. A fully conservative finite difference implementation of the method of
@@ -34,12 +39,13 @@ clear; %close all; clc;
 global gamma
 
 %% Parameters
-CFL     = 0.55;	% CFL number
-tFinal	= 0.10;	% Final time
-nE      = 200;  % Number of cells/Elements
-gamma   = 1.4;  % Ratio of specific heats for ideal di-atomic gas
-IC      = 01;	% 10 IC cases are available
-plot_fig= 1;
+CFL     = 0.55;	% CFL number;
+tFinal	= 0.10;	% Final time;
+nE      = 200;  % Number of cells/Elements;
+gamma   = 1.4;  % Ratio of specific heats for ideal di-atomic gas;
+IC      = 01;	% 10 IC cases are available;
+fsplit  = 'SHLL'; % LF, RUS, SHLL; 
+plotFig = true;
 
 % Discretize spatial domain
 a=0; b=1; dx=(b-a)/nE; nx=nE+1; x=linspace(a,b,nx);
@@ -68,15 +74,15 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    dF=WENO5LF1d(lambda,q,dx);     q = qo-dt*dF; 
+    dF=FD_WENO5fluxSplitting1d(lambda,q,dx,fsplit);	q = qo-dt*dF; 
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
     
     % 2nd Stage
-    dF=WENO5LF1d(lambda,q,dx);     q = 0.75*qo+0.25*(q-dt*dF);
+    dF=FD_WENO5fluxSplitting1d(lambda,q,dx,fsplit);	q = 0.75*qo+0.25*(q-dt*dF);
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
 
     % 3rd stage
-    dF=WENO5LF1d(lambda,q,dx);     q = (qo+2*(q-dt*dF))/3;
+    dF=FD_WENO5fluxSplitting1d(lambda,q,dx,fsplit);	q = (qo+2*(q-dt*dF))/3;
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
    
     % compute primary properties
@@ -90,14 +96,12 @@ while t<tFinal
 	t=t+dt; it=it+1;
     
     % Plot figure
-    if rem(it,10) == 0
-        if plot_fig == 1
-            subplot(2,2,1); plot(x,rho,'.b');
-            subplot(2,2,2); plot(x,u,'.m'); 
-            subplot(2,2,3); plot(x,p,'.k'); 
-            subplot(2,2,4); plot(x,E,'.r');
-        end
-	drawnow
+    if plotFig && rem(it,10) == 0
+        subplot(2,2,1); plot(x,rho,'.b');
+        subplot(2,2,2); plot(x,u,'.m');
+        subplot(2,2,3); plot(x,p,'.k');
+        subplot(2,2,4); plot(x,E,'.r');
+        drawnow
     end
 end
 
@@ -119,4 +123,4 @@ s3=subplot(2,3,3); plot(x,p,'or',xe,pe,'k'); xlabel('x(m)'); ylabel('Pressure (P
 s4=subplot(2,3,4); plot(x,ss,'or',xe,se,'k'); xlabel('x(m)'); ylabel('Entropy/R gas');
 s5=subplot(2,3,5); plot(x,M,'or',xe,Me,'k'); xlabel('x(m)'); ylabel('Mach number');
 s6=subplot(2,3,6); plot(x,e,'or',xe,ee,'k'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,'MOL WENO-LF Euler Solver');
+title(s1,['WENO5-',fsplit,' Euler solver']);
