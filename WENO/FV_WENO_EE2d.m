@@ -1,6 +1,6 @@
 function res = FV_WENO_EE2d(q,smax,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
 % Compute RHS of the semi-discrete form of the Euler equations.
-global gamma preshock postshock mesh_wedge_position shock_speed
+global gamma preshock postshock mesh_wedge_position
 
 %   Flux at j+1/2
 % 
@@ -51,15 +51,15 @@ switch Test
             end
         end
         % Time dependent BCs at the top of domain: moving shock
-        for j=3:nx-2
-%             if j<0
-%                 q(1,j,:)=postshock; % Dirichlet BCs
-%                 q(2,j,:)=postshock; % Dirichlet BCs
-%             else
-%                 q(1,j,:)=preshock; % Dirichlet BCs
-%                 q(2,j,:)=preshock; % Dirichlet BCs
-%             end
-        end       
+        for i=ny-1:ny % only gosht cells at the top
+            for j=3:nx-2 % evaluate all x domain
+                if distance_to_shock(j*dx+dx/2,i*dy+dy/2,t) < 0 % mesh_shock
+                    q(i,j,:)=postshock; % Dirichlet BCs
+                else
+                    q(i,j,:)=preshock; % Dirichlet BCs
+                end
+            end
+        end
     otherwise, error('Test boundaries not set!');
 end
 
@@ -210,6 +210,17 @@ for i=R:(nx+1-R) % for all interior cells
 end
 
 end % FVM WENO
+
+%%%%%%%%%%%%%%%%%%%
+% Distance to shock (for Double Mach Reflection)
+%%%%%%%%%%%%%%%%%%%
+
+function distance = distance_to_shock(x,y,t)
+    global shock_speed
+    shock_slope = 1/tan(pi/6); % from problem definition
+    wedge_position = 1/6; % from problem definition
+    distance = (shock_slope*(x-wedge_position-shock_speed*t)-y) / sqrt((shock_slope)^2+1);
+end
 
 %%%%%%%%%%%%%%%%%
 % Flux functions

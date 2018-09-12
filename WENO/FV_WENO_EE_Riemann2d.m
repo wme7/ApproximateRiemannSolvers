@@ -91,13 +91,13 @@ while t < tEnd
     qo = q;
     
     % 1st stage
-    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=qo-dt*L;
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=qo-dt*L;
     
     % 2nd Stage
-    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=0.75*qo+0.25*(q-dt*L);
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=0.75*qo+0.25*(q-dt*L);
     
     % 3rd stage
-    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=(qo+2*(q-dt*L))/3;
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=(qo+2*(q-dt*L))/3;
     
 	% Compute flow properties
     r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4);

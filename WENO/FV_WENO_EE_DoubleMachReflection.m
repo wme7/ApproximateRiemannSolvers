@@ -52,9 +52,9 @@ mesh_wedge_position = x_wedge_position/dx;
 % Set IC
 [r0,u0,v0,p0,preshock,postshock,shock_speed] = Euler_DoubleMachReflection_IC2d(nx,ny);
 preshock=reshape(preshock,[1,1,4]);  postshock=reshape(postshock,[1,1,4]);
-E0 = p0./(gamma-1)+0.5*r0.*(u0.^2+v0.^2); % Total Energy
-c0 = sqrt(gamma*p0./r0);                  % Speed of sound
-Q0 = cat(3, r0, r0.*u0, r0.*v0, E0);      % initial state
+E0 = p0./(gamma-1)+0.5*r0.*(u0.^2+v0.^2);  % Total Energy
+c0 = sqrt(gamma*p0./r0);                   % Speed of sound
+Q0 = cat(3, r0, r0.*u0, r0.*v0, E0);       % initial state
 
 % Set q-array & adjust grid for ghost cells
 switch reconMth
@@ -73,13 +73,12 @@ dt0=CFL*min(dx./a0,dy./a0);
 % if isempty(poolobj); parpool('local',4); end
 
 % Configure figure 
- % internal indexes
 if plotFig
     figure(1);
-    subplot(2,2,1); [~,h1]=contourf(x,y,r0); axis('square'); xlabel('x'); ylabel('y'); title('\rho');
-    subplot(2,2,2); [~,h2]=contourf(x,y,u0); axis('square'); xlabel('x'); ylabel('y'); title('u_x');
-    subplot(2,2,3); [~,h3]=contourf(x,y,v0); axis('square'); xlabel('x'); ylabel('y'); title('u_y');
-    subplot(2,2,4); [~,h4]=contourf(x,y,p0); axis('square'); xlabel('x'); ylabel('y'); title('p');
+    subplot(2,2,1); [~,h1]=contourf(x,y,r0); axis('equal'); xlabel('x'); ylabel('y'); title('\rho');
+    subplot(2,2,2); [~,h2]=contourf(x,y,u0); axis('equal'); xlabel('x'); ylabel('y'); title('u_x');
+    subplot(2,2,3); [~,h3]=contourf(x,y,v0); axis('equal'); xlabel('x'); ylabel('y'); title('u_y');
+    subplot(2,2,4); [~,h4]=contourf(x,y,p0); axis('equal'); xlabel('x'); ylabel('y'); title('p');
 end
 
 %% Solver Loop
@@ -96,13 +95,13 @@ while t < tEnd
     qo = q;
     
     % 1st stage
-    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,'DMR');	q=qo-dt*L;
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR');	q=qo-dt*L;
     
     % 2nd Stage
-    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,'DMR');	q=0.75*qo+0.25*(q-dt*L);
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR');	q=0.75*qo+0.25*(q-dt*L);
     
     % 3rd stage
-    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,'DMR');	q=(qo+2*(q-dt*L))/3;
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR');	q=(qo+2*(q-dt*L))/3;
     
 	% Compute flow properties
     r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4);
@@ -110,7 +109,7 @@ while t < tEnd
     
     % Update dt and time
     vn=sqrt(u.^2+v.^2); lambda1=vn+c; lambda2=vn-c;
-    dt=CFL*min(dx/a,dy/a);  a=max(abs([lambda1(:);lambda2(:)]));
+    a=max(abs([lambda1(:);lambda2(:)])); dt=CFL*min(dx/a,dy/a);  
     
 	% update iteration counter 
     it=it+1;
@@ -127,7 +126,7 @@ end
 cputime = toc;
 
 % Remove ghost cells
-q=q(in,jn,:); nx=nx-2; ny=ny-2; 
+q=q(in,jn,:); nx=nx-2*(R-1); ny=ny-2*(R-1); 
 
 % compute flow properties
 r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r; p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2));
@@ -146,10 +145,10 @@ e = p./((gamma-1)*r);   % internal Energy
 
 %% Final plot
 offset=0.05; n=50; % contour lines
-s1=subplot(2,3,1); contour(x,y,r,n); axis('square'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
-s2=subplot(2,3,2); contour(x,y,U,n); axis('square'); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
-s3=subplot(2,3,3); contour(x,y,p,n); axis('square'); xlabel('x(m)'); ylabel('Pressure (Pa)');
-s4=subplot(2,3,4); contour(x,y,ss,n);axis('square'); xlabel('x(m)'); ylabel('Entropy/R gas');
-s5=subplot(2,3,5); contour(x,y,M,n); axis('square'); xlabel('x(m)'); ylabel('Mach number');
-s6=subplot(2,3,6); contour(x,y,e,n); axis('square'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,[Recon,'-',fluxMth,' Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);
+s1=subplot(2,3,1); contour(x,y,r,n); axis('equal'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
+s2=subplot(2,3,2); contour(x,y,U,n); axis('equal'); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
+s3=subplot(2,3,3); contour(x,y,p,n); axis('equal'); xlabel('x(m)'); ylabel('Pressure (Pa)');
+s4=subplot(2,3,4); contour(x,y,ss,n);axis('equal'); xlabel('x(m)'); ylabel('Entropy/R gas');
+s5=subplot(2,3,5); contour(x,y,M,n); axis('equal'); xlabel('x(m)'); ylabel('Mach number');
+s6=subplot(2,3,6); contour(x,y,e,n); axis('equal'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
+title(s1,[reconMth,'-',fluxMth,' Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);
