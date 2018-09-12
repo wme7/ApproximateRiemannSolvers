@@ -24,8 +24,8 @@
 %   Numerical Methods for Partial Differential Equations 18.5 (2002): 584-608. 
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-global gamma
-%clear; close all; clc;
+clear; close all; clc;
+global gamma 
 
 %% Parameters
 CFL     = 0.30;     % CFL number
@@ -35,6 +35,7 @@ ny      = 100;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
 fluxMth ='HLLE';	% LF, RUS, ROE, HLLE, HLLC.
+reconMth='WENO5';   % WENO5, WENO7;
 plotFig = true;     % Visualize evolution of domain
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -46,17 +47,17 @@ Ly=1; dy=Ly/ny; yc=dy/2:dy:Ly;
 [x,y] = meshgrid(xc,yc);
 
 % Set IC
-[r0,u0,v0,p0] = Euler_IC2d(x,y,IC);
-E0 = p0./((gamma-1)*r0)+0.5*(u0.^2+v0.^2);  % Total Energy
-c0 = sqrt(gamma*p0./r0);                    % Speed of sound
-Q0 = cat(3, r0, r0.*u0, r0.*v0, r0.*E0);    % initial state
+[r0,u0,v0,p0] = Euler_Riemann_IC2d(x,y,IC);
+E0 = p0./(gamma-1)+0.5*r0.*(u0.^2+v0.^2);  % Total Energy
+c0 = sqrt(gamma*p0./r0);                   % Speed of sound
+Q0 = cat(3, r0, r0.*u0, r0.*v0, E0);       % initial state
 
 % Set q-array & adjust grid for ghost cells
-nx=nx+2; ny=ny+2; q0=zeros(ny,nx,4); q0(2:ny-1,2:nx-1,1:4)=Q0;
-
-% Boundary Conditions in ghost cells
-q0(:,1,:)=q0(:,2,:); q0(:,nx,:)=q0(:,nx-1,:);   % Natural BCs
-q0(1,:,:)=q0(2,:,:); q0(ny,:,:)=q0(ny-1,:,:);   % Natural BCs
+switch reconMth
+    case {'WENO5','Poly5'}, R=3; nx=nx+2*(R-1); ny=ny+2*(R-1); in=R:ny+1-R; jn=R:nx+1-R;
+	case {'WENO7','Poly7'}, R=4; nx=nx+2*(R-1); ny=ny+2*(R-1); in=R:ny+1-R; jn=R:nx+1-R;
+end        
+q0=zeros(ny,nx,4); q0(in,jn,:)=Q0;
 
 % Discretize time domain
 vn = sqrt(u0.^2+v0.^2); lambda1=vn+c0; lambda2=vn-c0; 
@@ -68,7 +69,6 @@ dt0=CFL*min(dx./a0,dy./a0);
 % if isempty(poolobj); parpool('local',4); end
 
 % Configure figure 
-in=2:ny-1; jn=2:nx-1; % internal indexes
 if plotFig
     figure(1);
     subplot(2,2,1); [~,h1]=contourf(x,y,r0); axis('square'); xlabel('x'); ylabel('y'); title('\rho');
@@ -84,42 +84,31 @@ q=q0; t=dt0; it=0; dt=dt0; a=a0;
 
 tic
 while t < tEnd
+    % Interation local time
+    if t+dt>tEnd; dt=tEnd-t; end; t=t+dt;
+    
     % RK Initial step
     qo = q;
     
     % 1st stage
-    dF=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,fluxMth);	q=qo-dt*dF;
-   
-    q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
-    q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
-    q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
-    q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
+    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=qo-dt*L;
     
     % 2nd Stage
-    dF=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,fluxMth);	q=0.75*qo+0.25*(q-dt*dF);
-    
-	q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
-    q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
-    q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
-    q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
+    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=0.75*qo+0.25*(q-dt*L);
     
     % 3rd stage
-    dF=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,fluxMth);	q=(qo+2*(q-dt*dF))/3;
-    
-	q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
-    q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
-    q(1,:,:)=q(3,:,:); q( ny ,:,:)=q(ny-2,:,:);	% Natural BCs
-    q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
+    L=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=(qo+2*(q-dt*L))/3;
     
 	% Compute flow properties
-    r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r;
-    p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2)); c=sqrt(gamma*p./r);
+    r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4);
+    p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2)); c=sqrt(gamma*p./r);
     
     % Update dt and time
     vn=sqrt(u.^2+v.^2); lambda1=vn+c; lambda2=vn-c;
-    a = max(abs([lambda1(:);lambda2(:)]));
-    dt=CFL*min(dx/a,dy/a); if t+dt>tEnd; dt=tEnd-t; end
-	t=t+dt; it=it+1;
+    a = max(abs([lambda1(:);lambda2(:)])); dt=CFL*min(dx/a,dy/a); 
+    
+    % update iteration counter 
+    it=it+1;
     
     % Plot figure
     if plotFig && rem(it,2) == 0
@@ -133,7 +122,7 @@ end
 cputime = toc;
 
 % Remove ghost cells
-q=q(in,jn,1:4); nx=nx-2; ny=ny-2; 
+q=q(in,jn,:); nx=nx-2; ny=ny-2; 
 
 % compute flow properties
 r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r; p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2));

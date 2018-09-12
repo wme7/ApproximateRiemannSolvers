@@ -1,4 +1,4 @@
-function [r0,u0,v0,E0,preshock,postshock] = Euler_DoubleMachReflection_IC2d(nx,ny)
+function [r0,u0,v0,p0,preshock,postshock] = Euler_DoubleMachReflection_IC2d(nx,ny)
     % Load the IC of a classical Double Mach Reflection test problem.
     %
     %  r = rho/gas density
@@ -54,14 +54,14 @@ function [r0,u0,v0,E0,preshock,postshock] = Euler_DoubleMachReflection_IC2d(nx,n
     r0 = r1*ones(ny,nx);
     u0 = u1*ones(ny,nx);
     v0 = v1*ones(ny,nx);
-    E0 = E1*ones(ny,nx);
+    p0 = v1*ones(ny,nx);
 
     % Shock state
     mask = x<x0+y*tan(pi/6); % tan(pi/6)=1/sqrt(3);
     r0(mask) = r2;
     u0(mask) = u2;
     v0(mask) = v2;
-    E0(mask) = E2;
+    p0(mask) = p2;
 
 end
 

@@ -53,10 +53,11 @@ q0(:,nx)=q0(:,nx-2); q0(:,nx-1)=q0(:,nx-2);
 % Initial time step
 lambda0=abs(u0)+a0; dt0=CFL*dx/max(lambda0(:));
 
+%% Solver Loop
+
 % Load IC
 q=q0; t=0; it=0; dt=dt0; lambda=lambda0;
 
-%% Solver Loop
 while t<tFinal
     % RK Initial step
     qo = q;
