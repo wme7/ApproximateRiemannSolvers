@@ -51,7 +51,7 @@ q0(:,1 )=q0(:, 3  ); q0(:, 2  )=q0(:, 3  ); % Natural BCs
 q0(:,nx)=q0(:,nx-2); q0(:,nx-1)=q0(:,nx-2); 
 
 % Initial time step
-lambda0=abs(u0)+a0; dt0=CFL*dx/max(lambda0(:));
+lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;
 
 %% Solver Loop
 
@@ -59,21 +59,24 @@ lambda0=abs(u0)+a0; dt0=CFL*dx/max(lambda0(:));
 q=q0; t=0; it=0; dt=dt0; lambda=lambda0;
 
 while t<tFinal
+    % iteration local time
+    if t+dt>tFinal; dt=tFinal-t; end; t=t+dt;
+    
     % RK Initial step
     qo = q;
     
     % 1st stage
-    L=FV_charWise_WENO5_EE1d(q,max(lambda(:)),nx,dx);	q = qo-dt*L;
+    L=FV_charWise_WENO5_EE1d(q,lambda,nx,dx);	q = qo-dt*L;
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
     % 2nd Stage
-    L=FV_charWise_WENO5_EE1d(q,max(lambda(:)),nx,dx);	q = 0.75*qo+0.25*(q-dt*L);
+    L=FV_charWise_WENO5_EE1d(q,lambda,nx,dx);	q = 0.75*qo+0.25*(q-dt*L);
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
     % 3rd stage
-    L=FV_charWise_WENO5_EE1d(q,max(lambda(:)),nx,dx);	q = (qo+2*(q-dt*L))/3;
+    L=FV_charWise_WENO5_EE1d(q,lambda,nx,dx);	q = (qo+2*(q-dt*L))/3;
     q(:,1)=qo(:,3); q(:, nx )=qo(:,nx-2); % Neumann BCs
     q(:,2)=qo(:,3); q(:,nx-1)=qo(:,nx-2); % Neumann BCs
     
@@ -81,8 +84,10 @@ while t<tFinal
     r=q(1,:); u=q(2,:)./r; E=q(3,:)./r; p=(gamma-1)*r.*(E-0.5*u.^2); a=sqrt(gamma*p./r);
     
     % Update dt and time
-    lambda=abs(u)+a; dt=CFL*dx/max(lambda(:));
-    if t+dt>tFinal; dt=tFinal-t; end; t=t+dt; it=it+1;
+    lambda=max(abs(u)+a); dt=CFL*dx/lambda;
+    
+    % Update iteration counter
+    it=it+1;
     
     % Plot figure
     if rem(it,10) == 0

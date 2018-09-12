@@ -34,7 +34,7 @@ nx      = 200;      % Number of cells/Elements in x
 ny      = 200;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
-fluxMth ='HLLE';    % LF, RUS, ROE, HLLE, HLLC.
+fluxMth ='HLLC';    % LF, RUS, ROE, HLLE, HLLC.
 reconMth='WENO7';   % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;     % Visualize evolution of domain
 
@@ -54,8 +54,8 @@ Q0 = cat(3, r0, r0.*u0, r0.*v0, E0);       % initial state
 
 % Set q-array & adjust grid for ghost cells
 switch reconMth
-    case {'WENO5','Poly5'}, R=3; nx=nx+2*(R-1); ny=ny+2*(R-1); in=R:ny+1-R; jn=R:nx+1-R;
-	case {'WENO7','Poly7'}, R=4; nx=nx+2*(R-1); ny=ny+2*(R-1); in=R:ny+1-R; jn=R:nx+1-R;
+    case {'WENO5','Poly5'}, R=3; nx=nx+2*R; ny=ny+2*R; in=R+1:ny-R; jn=R+1:nx-R;
+	case {'WENO7','Poly7'}, R=4; nx=nx+2*R; ny=ny+2*R; in=R+1:ny-R; jn=R+1:nx-R;
 end        
 q0=zeros(ny,nx,4); q0(in,jn,:)=Q0;
 
@@ -122,7 +122,7 @@ end
 cputime = toc;
 
 % Remove ghost cells
-q=q(in,jn,:); nx=nx-2*(R-1); ny=ny-2*(R-1); 
+q=q(in,jn,:); nx=nx-2*R; ny=ny-2*R; 
 
 % compute flow properties
 r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r; p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2));

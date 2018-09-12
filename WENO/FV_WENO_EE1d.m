@@ -1,18 +1,18 @@
-function res = FV_WENO_EE1d(q,nx,dx,fluxMethod,Recon)
+function res = FV_WENO_EE1d(q,a,nx,dx,fluxMethod,Recon)
 % Compute RHS of the semi-discrete form of the Euler equations.
 global gamma
 
 %   Flux at j+1/2
 % 
 %     j+1/2    Cell's grid: (assuming WENO5, R=3)
-%   |   |   |
-%   | wL|   |               {x=0}                     {x=L}
-%   |  /|wR |           1   2 | 3   4   5        N-3 N-2|N-1  N
-%   | / |\  |         |-o-|-o-|-o-|-o-|-o-| ... |-o-|-o-|-o-|-o-|
-%   |/  | \ |             1   2   3   4            N-3 N-2 N-1  
-%   |   |  \|
-%   |   |   |       NC: Here cells 1 to 2 and N-1 to N are ghost cells
-%     j  j+1            faces 2 and N-2, are the real boundary faces.
+%   |   |   |                   {x=0}             {x=L}
+%   | wL|   |                     |                 |
+%   |  /|wR |           1   2   3 | 4   5        N-3|N-2 N-1  N
+%   | / |\  |         |-o-|-o-|-o-|-o-|-o-| ... |-o-|-o-|-o-|-o-|---> j
+%   |/  | \ |             1   2   3   4   6    N-4 N-3 N-2 N-1  
+%   |   |  \|                    {1} {2} {3}  ...  {nf}
+%   |   |   |       NC: Here cells 1 to 3 and N-2 to N are ghost cells
+%     j  j+1            faces 3 and N-3, are the real boundary faces.
 %
 %   q = cat(3, r, ru, rv, E);
 %   F = cat(3, ru, ru^2+p, ruv, ru(E+p));
@@ -25,9 +25,9 @@ switch Recon
     otherwise, error('reconstruction not available ;P');
 end
 
-%% 0. Set boundary conditions for Reiomann Problems: outflux BCs
-for i=1:R-1
-    q(:,i,:)=q(:,R,:); q(:,nx+1-i,:)=q(:,nx+1-R,:);	% Neumann BCs
+%% 0. Set boundary conditions for Riemann Problems: out flux BCs
+for i=1:R
+    q(:,i)=q(:,R+1); q(:,nx+1-i)=q(:,nx-R);	% Neumann BCs
 end
 
 %% 1. Reconstruct interface values: qL=q_{i+1/2}^{-} and qR=q_{i-1/2}^{+}
@@ -56,46 +56,60 @@ qR(2,:) = wR(2,:).*wR(1,:);
 qR(3,:) = wR(3,:)./(gamma-1) + 0.5*wR(1,:).*wR(2,:).^2;
 
 %% Compute finite volume residual term, df/dx.
-res=zeros(size(w)); flux=zeros(size(qR));
-for j = R:(nx-R), J=j+1-R; % for all interior faces 
-    % compute flux at i+1/2
-    %flux(:,j) = LFflux(qn(:,j-2),qp(:,j-2),gamma,smax);
+res=zeros(size(w)); flux=zeros(size(qR)); nf=nx+1-2*R;
+
+% compute flux at j+1/2
+for j = 1:nf % for all interior faces 
     switch fluxMethod
-        case 'ROE', flux(:,J) = ROEflux(qL(:,J),qR(:,J)); % Roe
-        case 'RUS', flux(:,J) = RUSflux(qL(:,J),qR(:,J));  % Rusanov
-        case 'HLLE',flux(:,J) = HLLEflux(qL(:,J),qR(:,J)); % HLLE
-        case 'AUSM',flux(:,J) = AUSMflux(qL(:,J),qR(:,J)); % AUSM
-        case 'HLLC',flux(:,J) = HLLCflux(qL(:,J),qR(:,J)); % HLLC
+        case 'LF',  flux(:,j) = LFflux(qL(:,j),qR(:,j),a); % LF
+        case 'ROE', flux(:,j) = ROEflux(qL(:,j),qR(:,j));  % Roe
+        case 'RUS', flux(:,j) = RUSflux(qL(:,j),qR(:,j));  % Rusanov
+        case 'HLLE',flux(:,j) = HLLEflux(qL(:,j),qR(:,j)); % HLLE
+        case 'AUSM',flux(:,j) = AUSMflux(qL(:,j),qR(:,j)); % AUSM
+        case 'HLLC',flux(:,j) = HLLCflux(qL(:,j),qR(:,j)); % HLLC
     end
-    % Flux contribution to the residual of every cell
-    res(:, j ) = res(:, j ) + flux(:,J)/dx;
-    res(:,j+1) = res(:,j+1) - flux(:,J)/dx;
 end
 
-% Flux contribution of the LEFT MOST FACE: left face of cell j=1.
-%flux(:,3) = LFflux(qn(:,R),qp(:,R),gamma,smax);
-switch fluxMethod
-    case 'ROE', flux(:,1) = ROEflux(qL(:,1),qR(:,1)); % Roe
-    case 'RUS', flux(:,1) = RUSflux(qL(:,1),qR(:,1)); % Rusanov
-    case 'HLLE',flux(:,1) = HLLEflux(qL(:,1),qR(:,1)); % HLLE
-    case 'AUSM',flux(:,1) = AUSMflux(qL(:,1),qR(:,1)); % AUSM
-    case 'HLLC',flux(:,1) = HLLCflux(qL(:,1),qR(:,1)); % HLLC
+% Flux contribution to the residual of every cell
+res(:,R+1) = res(:,R+1) - flux(:,1)/dx; % left face of cell j=4.
+for j = 2:nf-1 % for all interior faces 
+    res(:,j+R-1) = res(:,j+R-1) + flux(:,j)/dx;
+    res(:, j+R ) = res(:, j+R ) - flux(:,j)/dx;
 end
-res(:,R) = res(:,R) - flux(:,1)/dx;
- 
-% Flux contribution of the RIGHT MOST FACE: right face of cell j=nx-1.
-%flux(:,nx-2) = LFflux(qn(:,nx-1-2*R),qp(:,nx-1-2*R),gamma,smax);
-J=nx+1-2*R;
-switch fluxMethod
-    case 'ROE', flux(:,J) = ROEflux(qL(:,J),qR(:,J)); % Roe
-    case 'RUS', flux(:,J) = RUSflux(qL(:,J),qR(:,J)); % Rusanov
-    case 'HLLE',flux(:,J) = HLLEflux(qL(:,J),qR(:,J)); % HLLE
-    case 'AUSM',flux(:,J) = AUSMflux(qL(:,J),qR(:,J)); % AUSM
-    case 'HLLC',flux(:,J) = HLLCflux(qL(:,J),qR(:,J)); % HLLC
-end
-res(:,nx+1-R) = res(:,nx+1-R) + flux(:,J)/dx;
+res(:,nx-R)= res(:,nx-R)+ flux(:,nf)/dx; % right face of cell j=N-3.
 
 end % FVM WENO
+
+%%%%%%%%%%%%%%%%%%
+% Flux Functions
+%%%%%%%%%%%%%%%%%%
+
+function FL = LFflux(qL,qR,smax)
+    % Lax-Friedrichs flux:
+    %
+    % P. D. Lax, Weak Solutions of Nonlinear Hyperbolic Equations and Their
+    % Numerical Computation, Commun. Pure and Applied Mathematics, 7, 159-193, 
+    % 1954.
+    global gamma
+    
+    % Left state
+    rL = qL(1);
+    uL = qL(2)./rL;
+    pL = (gamma-1)*( qL(3) - rL*uL*uL/2 );
+    HL = ( qL(3) + pL ) / rL;
+    
+    % Right state
+    rR = qR(1);
+    uR = qR(2)./rR;
+    pR = (gamma-1)*( qR(3) - rR*uR*uR/2 );
+    HR = ( qL(3) + pL ) / rL;
+    
+    FL=[rL*uL; rL*uL^2+pL; uL*(rL*HL)];
+    FR=[rR*uR; rR*uR^2+pR; uR*(rR*HR)];
+    
+    % Lax-Friedrichs Numerical Flux
+    FL = 0.5*( FR + FL + smax*(qL-qR) );
+end
 
 function Roe = ROEflux(qL,qR)
     % Roe flux function
@@ -370,6 +384,10 @@ function HLLC = HLLCflux(qL,qR)
         HLLC = FR;
     end
 end
+
+%%%%%%%%%%%%%%%%%%
+% Reconstructions
+%%%%%%%%%%%%%%%%%%
 
 function [wn,wp] = WENO5recon(w,N)
 % *************************************************************************

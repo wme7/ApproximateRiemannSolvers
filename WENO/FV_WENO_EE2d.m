@@ -1,18 +1,18 @@
-function res = FV_WENO_EE2d(q,smax,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
+function res = FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
 % Compute RHS of the semi-discrete form of the Euler equations.
 global gamma preshock postshock mesh_wedge_position
 
 %   Flux at j+1/2
 % 
 %     j+1/2    Cell's grid: (assuming WENO5, R=3)
-%   |   |   |
-%   | wL|   |               {x=0}                     {x=L}
-%   |  /|wR |           1   2 | 3   4   5        N-3 N-2|N-1  N
-%   | / |\  |         |-o-|-o-|-o-|-o-|-o-| ... |-o-|-o-|-o-|-o-|
-%   |/  | \ |             1   2   3   4            N-3 N-2 N-1  
-%   |   |  \|
-%   |   |   |       NC: Here cells 1 to 2 and N-1 to N are ghost cells
-%     j  j+1            faces 2 and N-2, are the real boundary faces.
+%   |   |   |                   {x=0}             {x=L}
+%   | wL|   |                     |                 |
+%   |  /|wR |           1   2   3 | 4   5        N-3|N-2 N-1  N
+%   | / |\  |         |-o-|-o-|-o-|-o-|-o-| ... |-o-|-o-|-o-|-o-|---> j
+%   |/  | \ |             1   2   3   4   6    N-4 N-3 N-2 N-1  
+%   |   |  \|                    {1} {2} {3}  ...  {nf}
+%   |   |   |       NC: Here cells 1 to 3 and N-2 to N are ghost cells
+%     j  j+1            faces 3 and N-3, are the real boundary faces.
 %
 %   q = cat(3, r, ru, rv, E);
 %   F = cat(3, ru, ru^2+p, ruv, ru(E+p));
@@ -27,32 +27,32 @@ end
 
 switch Test
     case 'Riemann' % Set outflow BCs
-        for i=1:R-1
-            q(:,i,:)=q(:,R,:); q(:,nx+1-i,:)=q(:,nx+1-R,:);	% Neumann BCs
+        for i=1:R
+            q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
         end
-        for j=1:R-1
-            q(j,:,:)=q(R,:,:); q(ny+1-j,:,:)=q(ny+1-R,:,:);	% Neumann BCs
+        for j=1:R
+            q(j,:,:)=q(R+1,:,:); q(ny+1-j,:,:)=q(ny-R,:,:);	% Neumann BCs
         end
     case 'DMR' % Set DMR test BCs
         % Static BCs
         for j=1:ny
-            q(j,1,:)=postshock; q(j, nx ,:)=preshock; % Dirichlet BCs
-            q(j,2,:)=postshock; q(j,nx-1,:)=preshock; % Dirichlet BCs
+            for i=1:R
+                q(j,i,:)=postshock; q(j,nx+1-i,:)=preshock; % Dirichlet BCs
+            end
         end
         % Static BCs at the bottom of domain
-        for j=R:nx+1-R
-            if j<mesh_wedge_position
-                q(1,j,:)=postshock; % Dirichlet BCs
-                q(2,j,:)=postshock; % Dirichlet BCs
-            else
-                q(1,j,:)=q(3,j,:); q(1,j,3)=-q(3,j,3); % EE reflective BC
-                q(2,j,:)=q(3,j,:); q(2,j,3)=-q(3,j,3); % EE reflective BC
-                q(3,j,3)=-q(3,j,3); % EE reflective BC
+        for i=1:R
+            for j=R+1:nx-R
+                if j<(mesh_wedge_position+R+1)
+                    q(i,j,:)=postshock; % Dirichlet BCs
+                else
+                    q(i,j,:)=q(R+1,j,:); q(i,j,3)=-q(R+1,j,3); % EE reflective BC
+                end
             end
         end
         % Time dependent BCs at the top of domain: moving shock
-        for i=ny-1:ny % only gosht cells at the top
-            for j=3:nx-2 % evaluate all x domain
+        for i=ny+1-R:ny % only gosht cells at the top
+            for j=R+1:nx-R % evaluate all x domain
                 if distance_to_shock(j*dx+dx/2,i*dy+dy/2,t) < 0 % mesh_shock
                     q(i,j,:)=postshock; % Dirichlet BCs
                 else
@@ -71,10 +71,10 @@ w(:,:,4) = (gamma-1)*( q(:,:,4) - 0.5*(q(:,:,2).^2+q(:,:,3).^2)./q(:,:,1));
 
 % 1. Reconstruct interface values: qL=q_{i+1/2}^{-} and qR=q_{i-1/2}^{+}
 switch Recon
-    case 'WENO5', [wL,wR] = WENO5recon_X(w,nx);
-    case 'WENO7', [wL,wR] = WENO7recon_X(w,nx);
-    case 'Poly5', [wL,wR] = POLY5recon_X(w,nx);
-    case 'Poly7', [wL,wR] = POLY7recon_X(w,nx);
+    case 'WENO5', [wL,wR] = WENO5recon_X(w(R+1:ny-R,:,:),nx);
+    case 'WENO7', [wL,wR] = WENO7recon_X(w(R+1:ny-R,:,:),nx);
+    case 'Poly5', [wL,wR] = POLY5recon_X(w(R+1:ny-R,:,:),nx);
+    case 'Poly7', [wL,wR] = POLY7recon_X(w(R+1:ny-R,:,:),nx);
     otherwise, error('reconstruction not available ;P');
 end
 
@@ -90,67 +90,44 @@ qR(:,:,3) = wR(:,:,3).*wR(:,:,1);
 qR(:,:,4) = wR(:,:,4)./(gamma-1) + 0.5*wR(:,:,1).*(wR(:,:,2).^2+wR(:,:,3).^2);
 
 % 2. Compute finite volume residual term, df/dx.
-res=zeros(size(q)); flux=zeros(size(qR));
+res=zeros(size(q)); flux=zeros(size(qR)); nc=ny-2*R; nf=nx+1-2*R;
 
 % Normal unitary face vectors: (nx,ny)
 % normals = {[1,0], [0,1]}; % i.e.: x-axis, y-axis
 
-for j=R:(ny+1-R) % for all interior cells
-    for i=R:(nx-R), I=i+1-R; % for all interior faces 
-        % compute flux at (i+1/2,j)
+% compute flux at (i+1/2,j)
+for j=1:nc % for all interior cells
+    for i=1:nf % for all interior faces 
         switch fluxMethod
-            case 'LF',  flux(j,I,:) = LFflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0],smax); % Lax Friedrichs
-            case 'ROE', flux(j,I,:) = ROEflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0]); % Roe
-            case 'RUS', flux(j,I,:) = RUSflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0]); % Rusanov
-            case 'HLLE',flux(j,I,:) = HLLEflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0]); % HLLE
-            case 'HLLC',flux(j,I,:) = HLLCflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0]); % HLLC
+            case 'LF',  flux(j,i,:) = LFflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0],a); % Lax Friedrichs
+            case 'ROE', flux(j,i,:) = ROEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]);  % Roe
+            case 'RUS', flux(j,i,:) = RUSflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]);  % Rusanov
+            case 'HLLE',flux(j,i,:) = HLLEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]); % HLLE
+            case 'HLLC',flux(j,i,:) = HLLCflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]); % HLLC
+            otherwise, error('flux method not available ;P');
         end
-        % Flux contribution to the residual of every cell
-        res(j, i ,:) = res(j, i ,:) + flux(j,I,:)/dx;
-        res(j,i+1,:) = res(j,i+1,:) - flux(j,I,:)/dx;
     end
 end
 
-% Flux contribution of the MOST WEST FACE: left face of cell j=3.
-for j=R:(ny+1-R) % for all interior cells
-    switch fluxMethod
-        case 'LF',  flux(j,1,:) = LFflux(squeeze(qL(j,1,:)),squeeze(qR(j,1,:)),[1,0],smax); % Lax Friedrichs
-        case 'ROE', flux(j,1,:) = ROEflux(squeeze(qL(j,1,:)),squeeze(qR(j,1,:)),[1,0]); % Roe
-        case 'RUS', flux(j,1,:) = RUSflux(squeeze(qL(j,1,:)),squeeze(qR(j,1,:)),[1,0]); % Rusanov
-        case 'HLLE',flux(j,1,:) = HLLEflux(squeeze(qL(j,1,:)),squeeze(qR(j,1,:)),[1,0]); % HLLE
-        case 'HLLC',flux(j,1,:) = HLLCflux(squeeze(qL(j,1,:)),squeeze(qR(j,1,:)),[1,0]); % HLLE
+% Flux contribution to the residual of every cell
+for j=1:nc % for all interior cells
+    res(j+R,R+1,:) = res(j+R,R+1,:) - flux(j,1,:)/dx; % left face of cell j=4.
+    for i = 2:nf-1 % for all interior faces
+        res(j+R,i+R-1,:) = res(j+R,i+R-1,:) + flux(j,i,:)/dx;
+        res(j+R, i+R ,:) = res(j+R, i+R ,:) - flux(j,i,:)/dx;
     end
-    res(j,R,:) = res(j,R,:) - flux(j,1,:)/dx;
-end
-
- 
-% Flux contribution of the MOST EAST FACE: right face of cell j=nx-2.
-I=nx+1-2*R;
-for j=R:(ny+1-R) % for all interior cells
-    switch fluxMethod
-        case 'LF',  flux(j,I,:) = LFflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0],smax); % Lax Friedrichs
-        case 'ROE', flux(j,I,:) = ROEflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0]); % Roe
-        case 'RUS', flux(j,I,:) = RUSflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0]); % Rusanov
-        case 'HLLE',flux(j,I,:) = HLLEflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0]); % HLLE
-        case 'HLLC',flux(j,I,:) = HLLCflux(squeeze(qL(j,I,:)),squeeze(qR(j,I,:)),[1,0]); % HLLC
-    end
-    res(j,nx+1-R,:) = res(j,nx+1-R,:) + flux(j,I,:)/dx;
+    res(j+R,nx-R,:) = res(j+R,nx-R,:) + flux(j,nf,:)/dx; % right face of cell j=N-3.
 end
 
 % Compute primitive variables at solution points (they still in memory)
-% w(:,:,1) = q(:,:,1);
-% w(:,:,2) = q(:,:,2)./q(:,:,1);
-% w(:,:,3) = q(:,:,3)./q(:,:,1);
-% w(:,:,4) = (gamma-1)*( q(:,:,4) - 0.5*(q(:,:,2).^2+q(:,:,3).^2)./q(:,:,1));
-clear qL qR;
+clear qL qR flux;
 
 % 1. Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
 switch Recon
-    case 'WENO5', [wL,wR] = WENO5recon_Y(w,ny);
-    case 'WENO7', [wL,wR] = WENO7recon_Y(w,ny);
-    case 'Poly5', [wL,wR] = POLY5recon_Y(w,ny);
-    case 'Poly7', [wL,wR] = POLY7recon_Y(w,ny);
-    otherwise, error('reconstruction not available ;P');
+    case 'WENO5', [wL,wR] = WENO5recon_Y(w(:,R+1:nx-R,:),ny);
+    case 'WENO7', [wL,wR] = WENO7recon_Y(w(:,R+1:nx-R,:),ny);
+    case 'Poly5', [wL,wR] = POLY5recon_Y(w(:,R+1:nx-R,:),ny);
+    case 'Poly7', [wL,wR] = POLY7recon_Y(w(:,R+1:nx-R,:),ny);
 end
 
 % Compute conservative variables at faces
@@ -165,48 +142,29 @@ qR(:,:,3) = wR(:,:,3).*wR(:,:,1);
 qR(:,:,4) = wR(:,:,4)./(gamma-1) + 0.5*wR(:,:,1).*(wR(:,:,2).^2+wR(:,:,3).^2);
 
 % 2. Compute finite volume residual term, df/dx.
-flux=zeros(size(qL));
+flux=zeros(size(qL)); nc=nx-2*R; nf=ny+1-2*R;
 
-for i=R:(nx+1-R) % for all interior cells
-    for j=R:(ny-R), J=j+1-R; % for all interior faces 
-        % compute flux at (i,j+1/2)
+% compute flux at (i,j+1/2)
+for i=1:nc % for all interior cells
+    for j=1:nf % for all interior faces 
         switch fluxMethod
-            case 'LF',  flux(J,i,:) = LFflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1],smax); % Lax Friedrichs
-            case 'ROE', flux(J,i,:) = ROEflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1]); % Roe
-            case 'RUS', flux(J,i,:) = RUSflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1]); % Rusanov
-            case 'HLLE',flux(J,i,:) = HLLEflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1]); % HLLE
-            case 'HLLC',flux(J,i,:) = HLLCflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1]); % HLLC
+            case 'LF',  flux(j,i,:) = LFflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1],a); % Lax Friedrichs
+            case 'ROE', flux(j,i,:) = ROEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]);  % Roe
+            case 'RUS', flux(j,i,:) = RUSflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]);  % Rusanov
+            case 'HLLE',flux(j,i,:) = HLLEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]); % HLLE
+            case 'HLLC',flux(j,i,:) = HLLCflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]); % HLLC
         end
-        % Flux contribution to the residual of every cell
-        res( j ,i,:) = res( j ,i,:) + flux(J,i,:)/dy;
-        res(j+1,i,:) = res(j+1,i,:) - flux(J,i,:)/dy;
     end
 end
 
-% Flux contribution of the MOST SOUTH FACE: left face of cell i=3.
-for i=R:(nx+1-R) % for all interior cells
-    switch fluxMethod
-        case 'LF',  flux(1,i,:) = LFflux(squeeze(qL(1,i,:)),squeeze(qR(1,i,:)),[0,1],smax); % Lax Friedrichs
-        case 'ROE', flux(1,i,:) = ROEflux(squeeze(qL(1,i,:)),squeeze(qR(1,i,:)),[0,1]); % Roe
-        case 'RUS', flux(1,i,:) = RUSflux(squeeze(qL(1,i,:)),squeeze(qR(1,i,:)),[0,1]); % Rusanov
-        case 'HLLE',flux(1,i,:) = HLLEflux(squeeze(qL(1,i,:)),squeeze(qR(1,i,:)),[0,1]); % HLLE
-        case 'HLLC',flux(1,i,:) = HLLCflux(squeeze(qL(1,i,:)),squeeze(qR(1,i,:)),[0,1]); % HLLC
+% Flux contribution to the residual of every cell
+for i=1:nc % for all interior cells
+    res(R+1,i+R,:) = res(R+1,i+R,:) - flux(1,i,:)/dy;
+    for j=2:nf-1 % for all interior cells
+        res(j+R-1,i+R,:) = res(j+R-1,i+R,:) + flux(j,i,:)/dy;
+        res( j+R ,i+R,:) = res( j+R ,i+R,:) - flux(j,i,:)/dy;
     end
-    res(R,i,:) = res(R,i,:) - flux(1,i,:)/dy;
-end
-
- 
-% Flux contribution of the MOST NORTH FACE: right face of cell i=ny-2.
-J=ny+1-2*R;
-for i=R:(nx+1-R) % for all interior cells
-    switch fluxMethod
-        case 'LF',  flux(J,i,:) = LFflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1],smax); % Lax Friedrichs
-        case 'ROE', flux(J,i,:) = ROEflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1]); % Roe
-        case 'RUS', flux(J,i,:) = RUSflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1]); % Rusanov
-        case 'HLLE',flux(J,i,:) = HLLEflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1]); % HLLE
-        case 'HLLC',flux(J,i,:) = HLLCflux(squeeze(qL(J,i,:)),squeeze(qR(J,i,:)),[0,1]); % HLLC
-    end
-    res(ny+1-R,i,:) = res(ny+1-R,i,:) + flux(J,i,:)/dy;
+    res(ny-R,i+R,:) = res(ny-R,i+R,:) + flux(nf,i,:)/dy;
 end
 
 end % FVM WENO
