@@ -88,7 +88,7 @@ while t < tEnd
     qo = q;
     
     % 1st stage
-    dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=qo-dt*dF;
+    dF=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,fluxMth);	q=qo-dt*dF;
    
     q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
     q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
@@ -96,7 +96,7 @@ while t < tEnd
     q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
     
     % 2nd Stage
-    dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=0.75*qo+0.25*(q-dt*dF);
+    dF=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,fluxMth);	q=0.75*qo+0.25*(q-dt*dF);
     
 	q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
     q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs
@@ -104,7 +104,7 @@ while t < tEnd
     q(2,:,:)=q(3,:,:); q(ny-1,:,:)=q(ny-2,:,:);	% Natural BCs
     
     % 3rd stage
-    dF=FV_WENO5HLL_2d(q,a,nx,ny,dx,dy,fluxMth);	q=(qo+2*(q-dt*dF))/3;
+    dF=FV_WENO5_EE2d(q,a,nx,ny,dx,dy,fluxMth);	q=(qo+2*(q-dt*dF))/3;
     
 	q(:,1,:)=q(:,3,:); q(:, nx ,:)=q(:,nx-2,:);	% Natural BCs
     q(:,2,:)=q(:,3,:); q(:,nx-1,:)=q(:,nx-2,:);	% Natural BCs

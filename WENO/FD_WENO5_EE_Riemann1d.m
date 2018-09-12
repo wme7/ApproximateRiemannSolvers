@@ -51,7 +51,7 @@ plotFig = true;
 a=0; b=1; dx=(b-a)/nE; nx=nE+1; x=linspace(a,b,nx);
 
 % Set IC
-[rho0,u0,p0] = Euler_IC1d(x,IC);
+[rho0,u0,p0] = Euler_Riemann_IC1d(x,IC);
 E0 = p0./((gamma-1)*rho0)+0.5*u0.^2;  % Total Energy density
 a0 = sqrt(gamma*p0./rho0);            % Speed of sound
 q0=[rho0; rho0.*u0; rho0.*E0];        % vec. of conserved properties
@@ -74,15 +74,15 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    dF=FD_WENO5fluxSplitting1d(lambda,q,dx,fsplit);	q = qo-dt*dF; 
+    dF=FD_WENO5_EE1d(lambda,q,dx,fsplit);	q = qo-dt*dF; 
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
     
     % 2nd Stage
-    dF=FD_WENO5fluxSplitting1d(lambda,q,dx,fsplit);	q = 0.75*qo+0.25*(q-dt*dF);
+    dF=FD_WENO5_EE1d(lambda,q,dx,fsplit);	q = 0.75*qo+0.25*(q-dt*dF);
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
 
     % 3rd stage
-    dF=FD_WENO5fluxSplitting1d(lambda,q,dx,fsplit);	q = (qo+2*(q-dt*dF))/3;
+    dF=FD_WENO5_EE1d(lambda,q,dx,fsplit);	q = (qo+2*(q-dt*dF))/3;
     q(:,1)=qo(:,1); q(:,end)=qo(:,end); % Neumann BCs
    
     % compute primary properties

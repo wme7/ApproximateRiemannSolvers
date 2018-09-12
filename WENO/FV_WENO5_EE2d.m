@@ -1,4 +1,4 @@
-function res = FV_WENO5HLL_2d(q,smax,nx,ny,dx,dy,fluxMethod)
+function res = FV_WENO5_EE2d(q,smax,nx,ny,dx,dy,fluxMethod)
 global gamma
 
 % Compute primitive variables at solution points

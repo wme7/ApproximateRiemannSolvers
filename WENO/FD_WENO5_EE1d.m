@@ -1,14 +1,7 @@
-function res = FD_WENO5fluxSplitting1d(a,w,dx,fsplitMth)
+function res = FD_WENO5_EE1d(a,w,dx,fsplitMth)
 % *************************************************************************
-% Input: u(i) = [u(i-2) u(i-1) u(i) u(i+1) u(i+2)];
-% Output: res = df/dx;
-%
-% Based on:
-% C.W. Shu's Lectures notes on: 'ENO and WENO schemes for Hyperbolic
-% Conservation Laws' 
-%
-% coded by Manuel Diaz, 02.10.2012, NTU Taiwan.
-% last update on 2016.04.29, NHRI Taiwan.
+% Coded by Manuel A. Diaz, 02.10.2012, NTU Taiwan.
+% Last update on 2016.04.29, NHRI Taiwan.
 % *************************************************************************
 %
 % Domain cells (I{i}) reference:

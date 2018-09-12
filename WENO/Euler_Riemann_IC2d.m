@@ -1,4 +1,4 @@
-function [r_0,u_0,v_0,p_0] = Euler_IC2d(x,y,input)
+function [r_0,u_0,v_0,p_0] = Euler_Riemann_IC2d(x,y,input)
 % Load the IC of a 1D Riemann classical schok tube problem configuration. 
 % In the notation we take advantage of the matlab array notation as follows
 %

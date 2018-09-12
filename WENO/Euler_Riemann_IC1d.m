@@ -1,4 +1,4 @@
-function [r0,u0,p0,tEnd,cfl] = Euler_IC1d(x,input)
+function [r0,u0,p0,tEnd,cfl] = Euler_Riemann_IC1d(x,input)
 % Load the IC of a classical 1D Riemann Problems.
 %
 % By Manuel Diaz 2012.10.24.

@@ -1,4 +1,4 @@
-function res = FV_WENO5HLL_1d(q,nx,dx,fluxMethod)
+function res = FV_WENO5_EE1d(q,nx,dx,fluxMethod)
 % *************************************************************************
 % Input: u(i) = [u(i-2) u(i-1) u(i) u(i+1) u(i+2)];
 % Output: res = df/dx;
