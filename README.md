@@ -30,16 +30,16 @@ Completed 1D solvers list:
 * THINC-BVD-HLL Contact (HLLC) FV-solver
 
 Completed 2D solvers list:
-* MUSCL-Lax Friedrichs FV-solver [by tensor product]
-* MUSCL-Rusanov (Rus) FV-solver [by tensor product]
-* MUSLC-ROE FV-solver [by tensor product]
-* MUSCL-Einfeldt (HLLE) FV-solver [by tensor product]
-* MUSCL-HLLC FV-solver [by tensor product]
-* WENO-Lax Friedrichs FV-solver [by tensor product]
-* WENO-Rusanov (Rus) FV-solver [by tensor product]
-* WENO-ROE FV-solver [by tensor product]
-* WENO-Einfeldt (HLLE) FV-solver [by tensor product]
-* WENO-HLLC FV-solver [by tensor product]
+* MUSCL-Lax Friedrichs FV-solver [dim by dim]
+* MUSCL-Rusanov (Rus) FV-solver [dim by dim]
+* MUSLC-ROE FV-solver [dim by dim]
+* MUSCL-Einfeldt (HLLE) FV-solver [dim by dim]
+* MUSCL-HLLC FV-solver [dim by dim]
+* WENO-Lax Friedrichs FV-solver [dim by dim]
+* WENO-Rusanov (Rus) FV-solver [dim by dim]
+* WENO-ROE FV-solver [dim by dim]
+* WENO-Einfeldt (HLLE) FV-solver [dim by dim]
+* WENO-HLLC FV-solver [dim by dim]
 
 Uncompleted 2D solvers list*:
 * MUSCL-Einfeldt (HLLE) FV-solver [true 2D solver]
