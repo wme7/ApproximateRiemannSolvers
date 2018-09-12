@@ -28,14 +28,14 @@ clear; close all; clc;
 global gamma preshock postshock mesh_wedge_position shock_speed
 
 %% Parameters
-CFL     = 0.475;  % CFL number
-tEnd    = 0.20;   % Final time
-nx      = 240;    % Number of cells/Elements in x
-ny      = 060;    % Number of cells/Elements in y
-n       = 5;      % Degrees of freedom: ideal air=5, monoatomic gas=3.
-fluxMth ='LF';    % LF, RUS, ROE, HLLE, HLLC.
+CFL     = 0.475;  % CFL number;
+tEnd    = 0.20;   % Final time;
+nx      = 240;    % Number of cells/Elements in x;
+ny      = 060;    % Number of cells/Elements in y;
+n       = 5;      % Degrees of freedom: ideal air=5, monoatomic gas=3;
+fluxMth ='LF';    % LF, RUS, ROE, HLLE, HLLC;
 reconMth='WENO7'; % WENO5, WENO7, Poly5, Poly7;
-plotFig = true;   % Visualize evolution of domain
+plotFig = true;   % Visualize evolution of domain.
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -74,7 +74,8 @@ dt0=CFL*min(dx./a0,dy./a0);
 
 % Configure figure 
 if plotFig
-    figure(1);
+    figure(1); set(gcf, 'Position', [0, 500, 1300, 400]);
+    %[~,h1]=contourf(r0); axis('equal'); xlabel('x'); ylabel('y'); title('\rho');
     subplot(2,2,1); [~,h1]=contourf(x,y,r0); axis('equal'); xlabel('x'); ylabel('y'); title('\rho');
     subplot(2,2,2); [~,h2]=contourf(x,y,u0); axis('equal'); xlabel('x'); ylabel('y'); title('u_x');
     subplot(2,2,3); [~,h3]=contourf(x,y,v0); axis('equal'); xlabel('x'); ylabel('y'); title('u_y');
@@ -95,13 +96,13 @@ while t < tEnd
     qo = q;
     
     % 1st stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR');	q=qo-dt*L;
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=qo-dt*L;
     
     % 2nd Stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR');	q=0.75*qo+0.25*(q-dt*L);
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=0.75*qo+0.25*(q-dt*L);
     
     % 3rd stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR');	q=(qo+2*(q-dt*L))/3;
+    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=(qo+2*(q-dt*L))/3;
     
 	% Compute flow properties
     r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4);
@@ -115,7 +116,8 @@ while t < tEnd
     it=it+1;
     
     % Plot figure
-    if plotFig && rem(it,2) == 0
+    if plotFig && rem(it,10) == 0
+        %set(h1,'ZData',r);
         set(h1,'ZData',r(in,jn));
         set(h2,'ZData',u(in,jn));
         set(h3,'ZData',v(in,jn));
@@ -129,26 +131,26 @@ cputime = toc;
 q=q(in,jn,:); nx=nx-2*R; ny=ny-2*R; 
 
 % compute flow properties
-r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r; p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2));
+r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4); p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2));
 
 %% Calculation of flow parameters
 c = sqrt(gamma*p./r);   % Speed of sound
 Mx = u./c; My = v./c; U = sqrt(u.^2+v.^2); M = U./c;
 p_ref = 101325;         % Reference air pressure (N/m^2)
 rho_ref= 1.225;         % Reference air density (kg/m^3)
-s = 1/(gamma-1)*(log(p/p_ref)+gamma*log(rho_ref./r)); 
+s_ref = 1/(gamma-1)*(log(p/p_ref)+gamma*log(rho_ref./r)); 
                         % Entropy w.r.t reference condition
-ss = log(p./r.^gamma);  % Dimensionless Entropy
+s = log(p./r.^gamma);   % Dimensionless Entropy
 r_x = r.*u;             % Mass Flow rate per unit area
 r_y = r.*v;             % Mass Flow rate per unit area
 e = p./((gamma-1)*r);   % internal Energy
 
 %% Final plot
-offset=0.05; n=50; % contour lines
-s1=subplot(2,3,1); contour(x,y,r,n); axis('equal'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
-s2=subplot(2,3,2); contour(x,y,U,n); axis('equal'); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
-s3=subplot(2,3,3); contour(x,y,p,n); axis('equal'); xlabel('x(m)'); ylabel('Pressure (Pa)');
-s4=subplot(2,3,4); contour(x,y,ss,n);axis('equal'); xlabel('x(m)'); ylabel('Entropy/R gas');
-s5=subplot(2,3,5); contour(x,y,M,n); axis('equal'); xlabel('x(m)'); ylabel('Mach number');
-s6=subplot(2,3,6); contour(x,y,e,n); axis('equal'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
+offset=0.05; region=[0,3,0,1]; n=50; % contour lines
+s1=subplot(2,3,1); contour(x,y,r,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
+s2=subplot(2,3,2); contour(x,y,U,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
+s3=subplot(2,3,3); contour(x,y,p,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Pressure (Pa)');
+s4=subplot(2,3,4); contour(x,y,s,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Entropy/R gas');
+s5=subplot(2,3,5); contour(x,y,M,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Mach number');
+s6=subplot(2,3,6); contour(x,y,e,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
 title(s1,[reconMth,'-',fluxMth,' Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);

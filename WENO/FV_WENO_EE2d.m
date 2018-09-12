@@ -26,6 +26,13 @@ switch Recon
 end
 
 switch Test
+    case 'Smooth' % Set Periodic BCs
+        for i=1:R
+            q(:,i,:)=q(:,nx-R+i,:); q(:,nx-2*R+i,:)=q(:,R+i,:);	% Periodic BCs
+        end
+        for j=1:R
+            q(j,:,:)=q(ny-R+i,:,:); q(ny-2*R+j,:,:)=q(R+j,:,:);	% Periodic BCs
+        end
     case 'Riemann' % Set outflow BCs
         for i=1:R
             q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
