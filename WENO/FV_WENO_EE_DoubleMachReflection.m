@@ -24,7 +24,7 @@
 %   Numerical Methods for Partial Differential Equations 18.5 (2002): 584-608. 
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-clear; close all; clc;
+clear; %close all; clc;
 global gamma preshock postshock mesh_wedge_position shock_speed
 
 %% Parameters
@@ -75,11 +75,19 @@ dt0=CFL*min(dx./a0,dy./a0);
 % Configure figure 
 if plotFig
     figure(1); set(gcf, 'Position', [0, 500, 1300, 400]);
-    %[~,h1]=contourf(r0); axis('equal'); xlabel('x'); ylabel('y'); title('\rho');
+    %q0=DMR_BCs(q0,0,nx,ny,dx,dy,R);
+    %[~,h1]=contourf(q0(:,:,1)); xlabel('x'); ylabel('y'); title('\rho');
     subplot(2,2,1); [~,h1]=contourf(x,y,r0); axis('equal'); xlabel('x'); ylabel('y'); title('\rho');
     subplot(2,2,2); [~,h2]=contourf(x,y,u0); axis('equal'); xlabel('x'); ylabel('y'); title('u_x');
     subplot(2,2,3); [~,h3]=contourf(x,y,v0); axis('equal'); xlabel('x'); ylabel('y'); title('u_y');
     subplot(2,2,4); [~,h4]=contourf(x,y,p0); axis('equal'); xlabel('x'); ylabel('y'); title('p');
+end
+
+% Select Solver
+solver = 2;
+switch solver
+    case 1, FV_EE2d = @FV_WENO_EE2d; % The orignal solver
+    case 2, FV_EE2d = @FV_WENO_EE2d_Cprototype; % The prototype for C
 end
 
 %% Solver Loop
@@ -96,16 +104,16 @@ while t < tEnd
     qo = q;
     
     % 1st stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=qo-dt*L;
+    L=FV_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=qo-dt*L;
     
     % 2nd Stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=0.75*qo+0.25*(q-dt*L);
+    L=FV_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=0.75*qo+0.25*(q-dt*L);
     
     % 3rd stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=(qo+2*(q-dt*L))/3;
+    L=FV_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=(qo+2*(q-dt*L))/3;
     
 	% Compute flow properties
-    r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4);
+    r=q(in,jn,1); u=q(in,jn,2)./r; v=q(in,jn,3)./r; E=q(in,jn,4);
     p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2)); c=sqrt(gamma*p./r);
     
     % Update dt and time
@@ -117,7 +125,8 @@ while t < tEnd
     
     % Plot figure
     if plotFig && rem(it,10) == 0
-        %set(h1,'ZData',r);
+        %q=DMR_BCs(q,t,nx,ny,dx,dy,R);
+        %set(h1,'ZData',q(:,:,1));
         set(h1,'ZData',r(in,jn));
         set(h2,'ZData',u(in,jn));
         set(h3,'ZData',v(in,jn));
@@ -125,7 +134,7 @@ while t < tEnd
         drawnow
     end
 end
-cputime = toc;
+cputime = toc; disp(['CPU time: ',num2str(cputime),' s']);
 
 % Remove ghost cells
 q=q(in,jn,:); nx=nx-2*R; ny=ny-2*R; 
@@ -147,10 +156,57 @@ e = p./((gamma-1)*r);   % internal Energy
 
 %% Final plot
 offset=0.05; region=[0,3,0,1]; n=50; % contour lines
-s1=subplot(2,3,1); contour(x,y,r,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
-s2=subplot(2,3,2); contour(x,y,U,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
-s3=subplot(2,3,3); contour(x,y,p,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Pressure (Pa)');
-s4=subplot(2,3,4); contour(x,y,s,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Entropy/R gas');
-s5=subplot(2,3,5); contour(x,y,M,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Mach number');
-s6=subplot(2,3,6); contour(x,y,e,n); axis(region); axis('equal'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
+s1=subplot(2,2,1); contour(x,y,r,n); axis(region); xlabel('x(m)'); ylabel('Density (kg/m^3)');
+s2=subplot(2,2,2); contour(x,y,U,n); axis(region); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
+s3=subplot(2,2,3); contour(x,y,p,n); axis(region); xlabel('x(m)'); ylabel('Pressure (Pa)');
+s4=subplot(2,2,4); contour(x,y,e,n); axis(region); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
 title(s1,[reconMth,'-',fluxMth,' Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);
+
+% %% %%%%%%%%%%%%%%%%%%%
+% % Boundary Conditions  (Do not delete!)
+% %%%%%%%%%%%%%%%%%%%%%%
+% 
+% function q=DMR_BCs(q,t,nx,ny,dx,dy,R)
+% global  preshock postshock mesh_wedge_position
+% 
+% % Static BCs
+% for i=1:R
+%     q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
+% end
+% % Static BCs at the bottom of domain
+% for j=1:R
+%     for i=R+1:nx-R
+%         if i<(R+mesh_wedge_position)
+%             q(j,i,:)=q(R+1,i,:); % outflow condition : Neumann BC
+%         else
+%             q(j,i,:)=q(R+1,i,:); q(j,i,3)=-q(R+1,i,3); % EE reflective BC
+%         end
+%     end
+% end
+% % Time dependent BCs at the top of domain: moving shock
+% for j=ny+1-R:ny % only gosht cells at the top
+%     for i=R+1:nx-R % evaluate all x domain
+%         if distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < -3*dx % mesh_shock
+%             q(j,i,:)=q(ny-R,i,:); % Neumann BCs
+%         elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) > 3*dx % mesh_shock
+%             q(j,i,:)=q(ny-R,i,:); % Neumann BCs
+%         elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < 0 % mesh_shock
+%             q(j,i,:)=postshock; % Dirichlet BCs
+%         else
+%             q(j,i,:)=preshock; % Dirichlet BCs
+%         end
+%     end
+% end
+% 
+% end
+% 
+% %%%%%%%%%%%%%%%%%%%
+% % Distance to shock 
+% %%%%%%%%%%%%%%%%%%%
+% 
+% function distance = distance_to_shock(x,y,t)
+%     global shock_speed
+%     shock_slope = 1/tan(pi/6); % from problem definition
+%     wedge_position = 1/6; % from problem definition
+%     distance = (shock_slope*(x-wedge_position-shock_speed*t)-y) / sqrt((shock_slope)^2+1);
+% end

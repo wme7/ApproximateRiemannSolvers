@@ -24,7 +24,7 @@
 %   Numerical Methods for Partial Differential Equations 18.5 (2002): 584-608. 
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-clear; close all; clc;
+clear; %close all; clc;
 global gamma 
 
 %% Parameters
@@ -34,9 +34,9 @@ nx      = 200;      % Number of cells/Elements in x
 ny      = 200;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
-fluxMth ='HLLC';    % LF, RUS, ROE, HLLE, HLLC.
-reconMth='WENO7';   % WENO5, WENO7, Poly5, Poly7;
-plotFig = true;     % Visualize evolution of domain
+fluxMth ='HLLE';    % LF, RUS, ROE, HLLE, HLLC.
+reconMth='WENO5';   % WENO5, WENO7, Poly5, Poly7;
+plotFig = false;     % Visualize evolution of domain
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -65,8 +65,8 @@ a0 = max(abs([lambda1(:);lambda2(:)]));
 dt0=CFL*min(dx./a0,dy./a0); 
 
 % Initialize parpool
-% poolobj = gcp('nocreate'); % If no pool, do not create new one.
-% if isempty(poolobj); parpool('local',4); end
+poolobj = gcp('nocreate'); % If no pool, do not create new one.
+if isempty(poolobj); parpool('local',4); end
 
 % Configure figure 
 if plotFig
@@ -75,6 +75,13 @@ if plotFig
     subplot(2,2,2); [~,h2]=contourf(x,y,u0); axis('square'); xlabel('x'); ylabel('y'); title('u_x');
     subplot(2,2,3); [~,h3]=contourf(x,y,v0); axis('square'); xlabel('x'); ylabel('y'); title('u_y');
     subplot(2,2,4); [~,h4]=contourf(x,y,p0); axis('square'); xlabel('x'); ylabel('y'); title('p');
+end
+
+% Select Solver
+solver = 2;
+switch solver
+    case 1, FV_EE2d = @FV_WENO_EE2d; % The orignal solver
+    case 2, FV_EE2d = @FV_WENO_EE2d_Cprototype; % The prototype for C
 end
 
 %% Solver Loop
@@ -91,13 +98,13 @@ while t < tEnd
     qo = q;
     
     % 1st stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=qo-dt*L;
+    L=FV_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann'); q=qo-dt*L;
     
     % 2nd Stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=0.75*qo+0.25*(q-dt*L);
+    L=FV_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann'); q=0.75*qo+0.25*(q-dt*L);
     
     % 3rd stage
-    L=FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann');	q=(qo+2*(q-dt*L))/3;
+    L=FV_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'Riemann'); q=(qo+2*(q-dt*L))/3;
     
 	% Compute flow properties
     r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4);
@@ -119,7 +126,7 @@ while t < tEnd
         drawnow
     end
 end
-cputime = toc;
+cputime = toc; disp(['CPU time: ',num2str(cputime),' s']);
 
 % Remove ghost cells
 q=q(in,jn,:); nx=nx-2*R; ny=ny-2*R; 

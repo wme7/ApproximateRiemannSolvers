@@ -31,7 +31,7 @@ switch Test
             q(:,i,:)=q(:,nx-R+i,:); q(:,nx-2*R+i,:)=q(:,R+i,:);	% Periodic BCs
         end
         for j=1:R
-            q(j,:,:)=q(ny-R+i,:,:); q(ny-2*R+j,:,:)=q(R+j,:,:);	% Periodic BCs
+            q(j,:,:)=q(ny-R+j,:,:); q(ny-2*R+j,:,:)=q(R+j,:,:);	% Periodic BCs
         end
     case 'Riemann' % Set outflow BCs
         for i=1:R
@@ -42,28 +42,30 @@ switch Test
         end
     case 'DMR' % Set DMR test BCs
         % Static BCs
-        for j=1:ny
-            for i=1:R
-                q(j,i,:)=postshock; q(j,nx+1-i,:)=preshock; % Dirichlet BCs
-            end
+        for i=1:R
+            q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
         end
         % Static BCs at the bottom of domain
-        for i=1:R
-            for j=R+1:nx-R
-                if j<(mesh_wedge_position+R+1)
-                    q(i,j,:)=postshock; % Dirichlet BCs
+        for j=1:R
+            for i=R+1:nx-R
+                if i<(R+mesh_wedge_position)
+                    q(j,i,:)=q(R+1,i,:); % outflow condition : Neumann BC
                 else
-                    q(i,j,:)=q(R+1,j,:); q(i,j,3)=-q(R+1,j,3); % EE reflective BC
+                    q(j,i,:)=q(R+1,i,:); q(j,i,3)=-q(R+1,i,3); % EE reflective BC
                 end
             end
         end
         % Time dependent BCs at the top of domain: moving shock
-        for i=ny+1-R:ny % only gosht cells at the top
-            for j=R+1:nx-R % evaluate all x domain
-                if distance_to_shock(j*dx+dx/2,i*dy+dy/2,t) < 0 % mesh_shock
-                    q(i,j,:)=postshock; % Dirichlet BCs
+        for j=ny+1-R:ny % only gosht cells at the top
+            for i=R+1:nx-R % evaluate all x domain
+                if distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < -3*dx % mesh_shock
+                    q(j,i,:)=q(ny-R,i,:); % Neumann BC
+                elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) > 3*dx % mesh_shock
+                    q(j,i,:)=q(ny-R,i,:); % Neumann BC
+                elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < 0 % mesh_shock
+                    q(j,i,:)=postshock; % Dirichlet BCs
                 else
-                    q(i,j,:)=preshock; % Dirichlet BCs
+                    q(j,i,:)=preshock; % Dirichlet BCs
                 end
             end
         end
