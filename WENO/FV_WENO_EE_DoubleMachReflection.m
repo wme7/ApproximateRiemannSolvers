@@ -30,12 +30,12 @@ global gamma preshock postshock mesh_wedge_position shock_speed
 %% Parameters
 CFL     = 0.475;  % CFL number;
 tEnd    = 0.20;   % Final time;
-nx      = 240;    % Number of cells/Elements in x;
-ny      = 060;    % Number of cells/Elements in y;
+nx      = 480;    % Number of cells/Elements in x;
+ny      = 120;    % Number of cells/Elements in y;
 n       = 5;      % Degrees of freedom: ideal air=5, monoatomic gas=3;
 fluxMth ='LF';    % LF, RUS, ROE, HLLE, HLLC;
 reconMth='WENO7'; % WENO5, WENO7, Poly5, Poly7;
-plotFig = true;   % Visualize evolution of domain.
+plotFig = false;  % Visualize evolution of domain.
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -75,8 +75,7 @@ dt0=CFL*min(dx./a0,dy./a0);
 % Configure figure 
 if plotFig
     figure(1); set(gcf, 'Position', [0, 500, 1300, 400]);
-    %q0=DMR_BCs(q0,0,nx,ny,dx,dy,R);
-    %[~,h1]=contourf(q0(:,:,1)); xlabel('x'); ylabel('y'); title('\rho');
+    %q0=DMR_BCs(q0,0,nx,ny,dx,dy,R); [~,h1]=contourf(q0(:,:,1)); xlabel('x'); ylabel('y'); title('\rho');
     subplot(2,2,1); [~,h1]=contourf(x,y,r0); axis('equal'); xlabel('x'); ylabel('y'); title('\rho');
     subplot(2,2,2); [~,h2]=contourf(x,y,u0); axis('equal'); xlabel('x'); ylabel('y'); title('u_x');
     subplot(2,2,3); [~,h3]=contourf(x,y,v0); axis('equal'); xlabel('x'); ylabel('y'); title('u_y');
@@ -125,12 +124,11 @@ while t < tEnd
     
     % Plot figure
     if plotFig && rem(it,10) == 0
-        %q=DMR_BCs(q,t,nx,ny,dx,dy,R);
-        %set(h1,'ZData',q(:,:,1));
-        set(h1,'ZData',r(in,jn));
-        set(h2,'ZData',u(in,jn));
-        set(h3,'ZData',v(in,jn));
-        set(h4,'ZData',p(in,jn));
+        %q=DMR_BCs(q,t,nx,ny,dx,dy,R); set(h1,'ZData',q(:,:,1)); % for debuging
+        set(h1,'ZData',r);
+        set(h2,'ZData',u);
+        set(h3,'ZData',v);
+        set(h4,'ZData',p);
         drawnow
     end
 end
