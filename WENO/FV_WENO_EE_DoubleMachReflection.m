@@ -30,11 +30,11 @@ global gamma preshock postshock mesh_wedge_position shock_speed
 %% Parameters
 CFL     = 0.475;  % CFL number;
 tEnd    = 0.20;   % Final time;
-nx      = 480;    % Number of cells/Elements in x;
-ny      = 120;    % Number of cells/Elements in y;
+nx      = 240;    % Number of cells/Elements in x;
+ny      = 60;    % Number of cells/Elements in y;
 n       = 5;      % Degrees of freedom: ideal air=5, monoatomic gas=3;
 fluxMth ='LF';    % LF, RUS, ROE, HLLE, HLLC;
-reconMth='WENO7'; % WENO5, WENO7, Poly5, Poly7;
+reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = false;  % Visualize evolution of domain.
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -153,12 +153,16 @@ r_y = r.*v;             % Mass Flow rate per unit area
 e = p./((gamma-1)*r);   % internal Energy
 
 %% Final plot
-offset=0.05; region=[0,3,0,1]; n=30; % contour lines
+region=[0,3,0,1]; n=30; 
 s1=subplot(2,2,1); contour(x,y,r,n); axis(region); xlabel('x(m)'); ylabel('Density (kg/m^3)');
 s2=subplot(2,2,2); contour(x,y,U,n); axis(region); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
 s3=subplot(2,2,3); contour(x,y,p,n); axis(region); xlabel('x(m)'); ylabel('Pressure (Pa)');
 s4=subplot(2,2,4); contour(x,y,e,n); axis(region); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
 title(s1,[reconMth,'-',fluxMth,' Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);
+
+figure(2); v=linspace(1.731,20.92,n); % contour lines
+contour(x,y,r,v); axis(region); xlabel('x(m)'); ylabel('Density (kg/m^3)');
+title([num2str(n),' contour lines from 1.731 to 20.92, grid']);
 
 % %% %%%%%%%%%%%%%%%%%%%
 % % Boundary Conditions  (Do not delete!)

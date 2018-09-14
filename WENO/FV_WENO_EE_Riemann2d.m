@@ -147,7 +147,7 @@ r_y = r.*v;             % Mass Flow rate per unit area
 e = p./((gamma-1)*r);   % internal Energy
 
 %% Final plot
-offset=0.05; n=22; % contour lines
+n=30; % contour lines
 s1=subplot(2,3,1); contour(x,y,r,n); axis('square'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
 s2=subplot(2,3,2); contour(x,y,U,n); axis('square'); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
 s3=subplot(2,3,3); contour(x,y,p,n); axis('square'); xlabel('x(m)'); ylabel('Pressure (Pa)');
