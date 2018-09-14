@@ -30,12 +30,12 @@ global gamma
 %% Parameters
 CFL     = 0.60;     % CFL number
 tEnd    = 0.25;     % Final time
-nx      = 400;      % Number of cells/Elements in x
-ny      = 400;      % Number of cells/Elements in y
+nx      = 200;      % Number of cells/Elements in x
+ny      = 200;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
 fluxMth ='HLLE';    % LF, RUS, ROE, HLLE, HLLC.
-reconMth='WENO5';   % WENO5, WENO7, Poly5, Poly7;
+reconMth='WENO7';   % WENO5, WENO7, Poly5, Poly7;
 plotFig = false;     % Visualize evolution of domain
 
 % Ratio of specific heats for ideal di-atomic gas
