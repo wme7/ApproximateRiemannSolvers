@@ -40,26 +40,24 @@ global gamma
 
 %% Parameters
 CFL     = 0.50;	  % CFL number;
-tFinal	= 0.12;	  % Final time;
-nx      = 201;    % Number of nodes;
+tFinal	= 0.038;	  % Final time;
+nx      = 401;    % Number of nodes;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
-IC      = 01;	  % 10 IC cases are available;
-fsplit  ='SHLL';    % LF, RUS, SHLL; 
-recon   ='WENO7'; % WENO5, WENO7, Poly5, Poly7;
+fsplit  ='RUS';    % LF, RUS, SHLL; 
+recon   ='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;
 
 % Discretize spatial domain
 Lx=1; dx=Lx/(nx-1); xi=0:dx:Lx;
 
 % Set IC
-[r0,u0,p0] = Euler_Riemann_IC1d(xi,IC);
+[r0,u0,p0] = Euler_CWblastwave_IC1d(xi);
 E0 = p0./((gamma-1))+0.5*r0.*u0.^2;  % Total Energy density
 a0 = sqrt(gamma*p0./r0);   % Speed of sound
 Q0=[r0; r0.*u0; E0];   % vec. of conserved properties
 
-% Exact solution
-[xe,re,ue,pe,ee,te,Me,se] = ...
-   EulerExact(r0(1),u0(1),p0(1),r0(nx),u0(nx),p0(nx),tFinal);
+% Load reference solution
+load('CWblastwaveRef.mat'); xe=x; re=r; pe=p; ue=u; ee = p./((gamma-1)*r);
 
 % Set q-array & adjust grid for ghost cells
 switch recon
@@ -70,13 +68,6 @@ q0=zeros(3,nx); q0(:,in)=Q0;
 
 % Discretize time domain
 lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;  % using the system's largest eigenvalue
-
-% Select Solver
-solver = 1;
-switch solver
-    case 1, FD_EE1d = @FD_WENO_EE1d; % The orignal solver
-    case 2, FD_EE1d = @FD_WENO_EE1d_PeriodicBCs; % Solver with periodic BCs
-end
 
 %% Solver Loop
 
@@ -91,13 +82,13 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    L=FD_EE1d(lambda,q,nx,dx,fsplit,recon,'Riemann');	q = qo-dt*L; 
+    L=FD_WENO_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = qo-dt*L; 
     
     % 2nd Stage
-    L=FD_EE1d(lambda,q,nx,dx,fsplit,recon,'Riemann');	q = 0.75*qo+0.25*(q-dt*L);
+    L=FD_WENO_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = 0.75*qo+0.25*(q-dt*L);
 
     % 3rd stage
-    L=FD_EE1d(lambda,q,nx,dx,fsplit,recon,'Riemann');	q = (qo+2*(q-dt*L))/3;
+    L=FD_WENO_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = (qo+2*(q-dt*L))/3;
    
     % compute primary properties
     r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2);
@@ -139,10 +130,8 @@ e = p./((gamma-1)*r);     % internal Energy
 
 %% Final plot
 figure(1);
-s1=subplot(2,3,1); plot(xi,r,'or',xe,re,'k'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
-s2=subplot(2,3,2); plot(xi,u,'or',xe,ue,'k'); xlabel('x(m)'); ylabel('Velocity (m/s)');
-s3=subplot(2,3,3); plot(xi,p,'or',xe,pe,'k'); xlabel('x(m)'); ylabel('Pressure (Pa)');
-s4=subplot(2,3,4); plot(xi,s,'or',xe,se,'k'); xlabel('x(m)'); ylabel('Entropy/R gas');
-s5=subplot(2,3,5); plot(xi,M,'or',xe,Me,'k'); xlabel('x(m)'); ylabel('Mach number');
-s6=subplot(2,3,6); plot(xi,e,'or',xe,ee,'k'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
+s1=subplot(2,2,1); plot(xi,r,'or',xe,re,'k'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
+s2=subplot(2,2,2); plot(xi,u,'or',xe,ue,'k'); xlabel('x(m)'); ylabel('Velocity (m/s)');
+s3=subplot(2,2,3); plot(xi,p,'or',xe,pe,'k'); xlabel('x(m)'); ylabel('Pressure (Pa)');
+s6=subplot(2,2,4); plot(xi,e,'or',xe,ee,'k'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
 title(s1,['FD-',recon,'-',fsplit,' Euler VFS-solver']);

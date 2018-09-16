@@ -1,36 +1,14 @@
-function res = FD_WENO_EE1d(a,q,nx,dx,fsplitMth,Recon,test)
+function res = FD_WENO_EE1d_PeriodicBCs(a,q,~,dx,fsplitMth,Recon,~)
 % *************************************************************************
 %
 %          Vertor Flux Splitting solver for system of equations
+%                   with periodic boundary conditions
 %
 % Coded by Manuel A. Diaz, 02.10.2012, NTU Taiwan.
 % Last update on 2016.04.29, NHRI Taiwan.
 % *************************************************************************
 
-% 1. Set boundary conditions for Riemann Problems: out flux BCs
-    % 1.1 Identify number of gost cells
-    switch Recon
-        case {'WENO5','Poly5'}, R=3; % R: stencil size and number of gost cells
-        case {'WENO7','Poly7'}, R=4;
-        otherwise, error('reconstruction not available ;P');
-    end
-    
-    % 1.2 Set Left and right boundary conditions
-    switch test
-        case 'Riemann'
-            for i=1:R
-                q(:,i)=q(:,R+1); q(:,nx+1-i)=q(:,nx-R);	% Neumann BCs
-            end
-        case 'CWblastwave'
-            for i=1:R
-                q(1,i)= q(1,R+1); q(1,nx+1-i)= q(1,nx-R);	
-                q(2,i)=-q(2,R+1); q(2,nx+1-i)=-q(2,nx-R); % Reflective BCs
-                q(3,i)= q(3,R+1); q(3,nx+1-i)= q(3,nx-R);
-            end
-        otherwise, error('BCs for test not set!');
-    end
-
-% 2. Produce flux splitting 
+% 1. Produce flux splitting 
 switch fsplitMth
     case 'LF',  [fp,fm] = LF(a,q);    % Lax-Friedrichs (LF) Flux Splitting
     case 'RUS', [fp,fm] = Rusanov(q); % Rusanov (Rus) Flux Splitting
@@ -38,24 +16,17 @@ switch fsplitMth
     otherwise, error('Splitting method not set.');
 end
 
-% 3. Produce reconstructions
+% 2. Produce reconstructions
 switch Recon
-    case 'WENO5', [flux] = WENO5recon(fp,fm,nx);
-    case 'WENO7', [flux] = WENO7recon(fp,fm,nx);
-    case 'Poly5', [flux] = POLY5recon(fp,fm,nx);
-    case 'Poly7', [flux] = POLY7recon(fp,fm,nx);
+    case 'WENO5', [hn,hp] = WENO5recon(fp,fm);
+    case 'WENO7', [hn,hp] = WENO7recon(fp,fm);
+    case 'Poly5', [hn,hp] = POLY5recon(fp,fm);
+    case 'Poly7', [hn,hp] = POLY7recon(fp,fm);
     otherwise, error('reconstruction not available ;P');
 end
 
-% 4. Compute finite difference residual term, df/dx.
-nf=nx+1-2*R; res = zeros(size(q));
-res(:,R+1) = res(:,R+1) - flux(:,1)/dx; % left face of cell j=4.
-for j = 2:nf-1 % for all interior faces
-    res(:,j+R-1) = res(:,j+R-1) + flux(:,j)/dx;
-    res(:, j+R ) = res(:, j+R ) - flux(:,j)/dx;
-end
-res(:,nx-R)= res(:,nx-R)+ flux(:,nf)/dx; % right face of cell j=N-3.
-
+% 3. Compute finite difference residual term, df/dx.
+res = (hp+hn-circshift(hp+hn,[0,1]))/dx;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -67,11 +38,11 @@ function [Fp,Fm] = LF(a,q)
     global gamma
     
     % primary properties
-    rho=q(1,:); u=q(2,:)./rho; E=q(3,:); 
-    p=(gamma-1)*(E-0.5*rho.*u.^2);
+    rho=q(1,:); Fm=q(2,:)./rho; E=q(3,:)./rho; 
+    p=(gamma-1)*rho.*(E-0.5*Fm.^2);
     
     % flux vector of conserved properties
-    F=[rho.*u; rho.*u.^2+p; u.*(E+p)];
+    F=[rho.*Fm; rho.*Fm.^2+p; Fm.*(rho.*E+p)];
     
     % Lax-Friedrichs flux
     Fp=0.5*(F + a*q); 
@@ -116,7 +87,6 @@ function [Fp,Fm] = SHLL(q)
     
     % constant column vector [1;1;1]
     I = ones(3,1);
-    
     Fp= 0.5*((I*(M+1)).*F + I*(a.*(1-M2)).*q); 
     Fm=-0.5*((I*(M-1)).*F + I*(a.*(1-M2)).*q); 
 end
@@ -125,7 +95,7 @@ end
 % Reconstructions
 %%%%%%%%%%%%%%%%%%
 
-function [flux] = WENO5recon(v,u,N)
+function [hn,hp] = WENO5recon(v,u)
 % *************************************************************************
 % Based on:
 % C.W. Shu's Lectures notes on: 'ENO and WENO schemes for Hyperbolic
@@ -172,19 +142,26 @@ function [flux] = WENO5recon(v,u,N)
 %
 % WENO stencil: S{i} = [ I{i-2},...,I{i+3} ]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-I=3:(N-3); % The stencil size
+% Careful!: by using circshift over our domain, we are implicitly creating a
+% favorable code that automatically includes periodical boundary conditions.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
-vmm = v(:,I-2);
-vm  = v(:,I-1);
-vo  = v(:, I );
-vp  = v(:,I+1);
-vpp = v(:,I+2);
+vmm = circshift(v,[0 2]);
+vm  = circshift(v,[0 1]);
+%v  = circshift(v,[0 0]);
+vp  = circshift(v,[0 -1]);
+vpp = circshift(v,[0 -2]);
+
+% Polynomials
+p0n = (2*vmm - 7*vm + 11*v)/6;
+p1n = ( -vm  + 5*v  + 2*vp)/6;
+p2n = (2*v   + 5*vp - vpp )/6;
 
 % Smooth Indicators (Beta factors)
-B0n = 13/12*(vmm-2*vm+vo  ).^2 + 1/4*(vmm-4*vm+3*vo).^2; 
-B1n = 13/12*(vm -2*vo +vp ).^2 + 1/4*(vm-vp).^2;
-B2n = 13/12*(vo  -2*vp+vpp).^2 + 1/4*(3*vo-4*vp+vpp).^2;
+B0n = 13/12*(vmm-2*vm+v  ).^2 + 1/4*(vmm-4*vm+3*v).^2; 
+B1n = 13/12*(vm -2*v +vp ).^2 + 1/4*(vm-vp).^2;
+B2n = 13/12*(v  -2*vp+vpp).^2 + 1/4*(3*v-4*vp+vpp).^2;
 
 % Constants
 d0n = 1/10; d1n = 6/10; d2n = 3/10; epsilon = 1e-6;
@@ -200,17 +177,20 @@ w0n = alpha0n./alphasumn;
 w1n = alpha1n./alphasumn;
 w2n = alpha2n./alphasumn;
 
-% Numerical Flux at cell boundary, $u_{i+1/2}^{-}$;
-flux = w0n.*(2*vmm - 7*vm + 11*vo)/6 ...
-     + w1n.*( -vm  + 5*vo  + 2*vp)/6 ...
-     + w2n.*(2*vo   + 5*vp - vpp )/6;
+% Numerical Flux at cell boundary, $v_{i+1/2}^{-}$;
+hn = w0n.*p0n + w1n.*p1n + w2n.*p2n;
 
 %% Extrapolation $u_{i+1/2}^{+}$ == $f_{i+1/2}^{-}$
-umm = u(:,I-1);
-um  = u(:, I );
-uo  = u(:,I+1);
-up  = u(:,I+2);
-upp = u(:,I+3);
+umm = circshift(u,[0 1]);
+um  = circshift(u,[0 0]);
+uo  = circshift(u,[0 -1]);
+up  = circshift(u,[0 -2]);
+upp = circshift(u,[0 -3]);
+
+% Polynomials
+p0p = ( -umm + 5*um + 2*uo  )/6;
+p1p = ( 2*um + 5*uo  - up   )/6;
+p2p = (11*uo  - 7*up + 2*upp)/6;
 
 % Smooth Indicators (Beta factors)
 B0p = 13/12*(umm-2*um+uo  ).^2 + 1/4*(umm-4*um+3*uo).^2; 
@@ -231,13 +211,11 @@ w0p = alpha0p./alphasump;
 w1p = alpha1p./alphasump;
 w2p = alpha2p./alphasump;
 
-% Numerical Flux at cell boundary, $u_{i+1/2}^{+}$;
-flux = flux + w0p.*( -umm + 5*um + 2*uo  )/6 ...
-            + w1p.*( 2*um + 5*uo  - up   )/6 ...
-            + w2p.*(11*uo  - 7*up + 2*upp)/6;
+% Numerical Flux at cell boundary, $u_{i-1/2}^{+}$;
+hp = w0p.*p0p + w1p.*p1p + w2p.*p2p;
 end
 
-function [flux] = WENO7recon(v,u,N)
+function [hn,hp] = WENO7recon(v,u)
 % *************************************************************************
 % Based on:
 % C.W. Shu's Lectures notes on: 'ENO and WENO schemes for Hyperbolic
@@ -285,25 +263,27 @@ function [flux] = WENO7recon(v,u,N)
 %
 % WENO stencil: S{i} = [ I{i-3},...,I{i+3} ]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-I=4:(N-4); % The stencil size
+% Careful!: by using circshift over our domain, we are implicitly creating a
+% favorable code that automatically includes periodical boundary conditions.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
-vmmm= v(:,I-3,:);
-vmm = v(:,I-2,:);
-vm  = v(:,I-1,:);
-vo  = v(:, I ,:);
-vp  = v(:,I+1,:);
-vpp = v(:,I+2,:);
-vppp= v(:,I+3,:);
+vmmm= circshift(v,[0 3]);
+vmm = circshift(v,[0 2]);
+vm  = circshift(v,[0 1]);
+%v  = circshift(v,[0 0]);
+vp  = circshift(v,[0 -1]);
+vpp = circshift(v,[0 -2]);
+vppp= circshift(v,[0 -3]);
 
 % Smooth Indicators
-B0n = vm.*(134241*vm-114894*vo)   +vmmm.*(56694*vm-47214*vmm+6649*vmmm-22778*vo)...
-        +25729*vo.^2  +vmm.*(-210282*vm+85641*vmm+86214*vo);
-B1n = vo.*(41001*vo-30414*vp)     +vmm.*(-19374*vm+3169*vmm+19014*vo-5978*vp)...
-        +6649*vp.^2   +vm.*(33441*vm-70602*vo+23094*vp);
-B2n = vp.*(33441*vp-19374*vpp)    +vm.*(6649*vm-30414*vo+23094*vp-5978*vpp)...
-        +3169*vpp.^2  +vo.*(41001*vo-70602*vp+19014*vpp);
-B3n = vpp.*(85641*vpp-47214*vppp) +vo.*(25729*vo-114894*vp+86214*vpp-22778*vppp)...
+B0n = vm.*(134241*vm-114894*v)   +vmmm.*(56694*vm-47214*vmm+6649*vmmm-22778*v)...
+        +25729*v.^2  +vmm.*(-210282*vm+85641*vmm+86214*v);
+B1n = v.*(41001*v-30414*vp)     +vmm.*(-19374*vm+3169*vmm+19014*v-5978*vp)...
+        +6649*vp.^2   +vm.*(33441*vm-70602*v+23094*vp);
+B2n = vp.*(33441*vp-19374*vpp)    +vm.*(6649*vm-30414*v+23094*vp-5978*vpp)...
+        +3169*vpp.^2  +v.*(41001*v-70602*vp+19014*vpp);
+B3n = vpp.*(85641*vpp-47214*vppp) +v.*(25729*v-114894*vp+86214*vpp-22778*vppp)...
         +6649*vppp.^2 +vp.*(134241*vp-210282*vpp+56694*vppp);
 
 % Constants
@@ -323,19 +303,19 @@ w2n = alpha2n./alphasumn;
 w3n = alpha3n./alphasumn;
 
 % Numerical Flux at cell boundary, $v_{i+1/2}^{-}$;
-flux = w0n.*(-3*vmmm + 13*vmm - 23*vm  + 25*vo  )/12 ...
-     + w1n.*( 1*vmm  - 5*vm   + 13*vo  +  3*vp  )/12 ...
-     + w2n.*(-1*vm   + 7*vo   +  7*vp  -  1*vpp )/12 ...
-     + w3n.*( 3*vo   + 13*vp  -  5*vpp +  1*vppp)/12;
+hn = w0n.*(-3*vmmm + 13*vmm - 23*vm  + 25*v  )/12 + ...
+     w1n.*( 1*vmm  - 5*vm   + 13*v  +  3*vp  )/12 + ...
+     w2n.*(-1*vm   + 7*v   +  7*vp  -  1*vpp )/12 + ...
+     w3n.*( 3*v   + 13*vp  -  5*vpp +  1*vppp)/12;
 
 %% Extrapolation $u_{i+1/2}^{+}$ == $f_{i+1/2}^{-}$
-ummm= u(:,I-2,:);
-umm = u(:,I-1,:);
-um  = u(:, I ,:);
-uo  = u(:,I+1,:);
-up  = u(:,I+2,:);
-upp = u(:,I+3,:);
-uppp= u(:,I+4,:);
+ummm= circshift(u,[0 2]);
+umm = circshift(u,[0 1]);
+um  = circshift(u,[0 0]);
+uo  = circshift(u,[0 -1]);
+up  = circshift(u,[0 -2]);
+upp = circshift(u,[0 -3]);
+uppp= circshift(u,[0 -4]);
 
 % Smooth Indicators
 B0p = um.*(134241*um-114894*uo)   +ummm.*(56694*um-47214*umm+6649*ummm-22778*uo)...
@@ -364,8 +344,8 @@ w2p = alpha2p./alphasump;
 w3p = alpha3p./alphasump;
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{+}$;
-flux = flux + w0p.*( 1*ummm - 5*umm  + 13*um  +  3*uo  )/12 ...
-            + w1p.*(-1*umm  + 7*um   +  7*uo  -  1*up  )/12 ... 
-            + w2p.*( 3*um   + 13*uo  -  5*up  +  1*upp )/12 ...
-            + w3p.*(25*uo   - 23*up  + 13*upp -  3*uppp)/12;
+hp = w0p.*( 1*ummm - 5*umm  + 13*um  +  3*uo  )/12 + ...
+     w1p.*(-1*umm  + 7*um   +  7*uo  -  1*up  )/12 + ... 
+     w2p.*( 3*um   + 13*uo  -  5*up  +  1*upp )/12 + ...
+     w3p.*(25*uo   - 23*up  + 13*upp -  3*uppp)/12;
 end

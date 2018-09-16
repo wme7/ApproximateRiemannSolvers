@@ -1,4 +1,4 @@
-function res = FV_WENO_EE1d(q,a,nx,dx,fluxMethod,Recon)
+function res = FV_WENO_EE1d(q,a,nx,dx,fluxMethod,Recon,test)
 % Compute RHS of the semi-discrete form of the Euler equations.
 global gamma
 
@@ -18,65 +18,78 @@ global gamma
 %   F = cat(3, ru, ru^2+p, ruv, ru(E+p));
 %   G = cat(3, rv, ruv, rv^2+p, rv(E+p));
 
-% Identify number of gost cells
-switch Recon
-    case {'WENO5','Poly5'}, R=3; % R: stencil size and number of gost cells
-    case {'WENO7','Poly7'}, R=4;
-    otherwise, error('reconstruction not available ;P');
-end
 
-%% 0. Set boundary conditions for Riemann Problems: out flux BCs
-for i=1:R
-    q(:,i)=q(:,R+1); q(:,nx+1-i)=q(:,nx-R);	% Neumann BCs
-end
+%% 1. Set boundary conditions for Riemann Problems: out flux BCs
 
-%% 1. Reconstruct interface values: qL=q_{i+1/2}^{-} and qR=q_{i-1/2}^{+}
+    % 1.1 Identify number of gost cells
+    switch Recon
+        case {'WENO5','Poly5'}, R=3; % R: stencil size and number of gost cells
+        case {'WENO7','Poly7'}, R=4;
+        otherwise, error('reconstruction not available ;P');
+    end
+    
+    % 1.2 Set Left and right boundary conditions
+    switch test
+        case 'Riemann'
+            for i=1:R
+                q(:,i)=q(:,R+1); q(:,nx+1-i)=q(:,nx-R);	% Neumann BCs
+            end
+        case 'CWblastwave'
+            for i=1:R
+                q(1,i)= q(1,R+1); q(1,nx+1-i)= q(1,nx-R);	
+                q(2,i)=-q(2,R+1); q(2,nx+1-i)=-q(2,nx-R); % Reflective BCs
+                q(3,i)= q(3,R+1); q(3,nx+1-i)= q(3,nx-R);
+            end
+        otherwise, error('BCs for test not set!');
+    end
 
-% Compute primitive variables at solution points
-w(1,:) = q(1,:);
-w(2,:) = q(2,:)./q(1,:);
-w(3,:) = (gamma-1)*( q(3,:) - 0.5*(q(2,:).^2)./q(1,:));
+% 2. Reconstruct interface values: qL=q_{i+1/2}^{-} and qR=q_{i-1/2}^{+}
 
-% Produce reconstruction
-switch Recon
-    case 'WENO5', [wL,wR] = WENO5recon(w,nx);
-    case 'WENO7', [wL,wR] = WENO7recon(w,nx);
-    case 'Poly5', [wL,wR] = POLY5recon(w,nx);
-    case 'Poly7', [wL,wR] = POLY7recon(w,nx);
-    otherwise, error('reconstruction not available ;P');
-end
+    % Compute primitive variables at solution points
+    w(1,:) = q(1,:);
+    w(2,:) = q(2,:)./q(1,:);
+    w(3,:) = (gamma-1)*( q(3,:) - 0.5*(q(2,:).^2)./q(1,:));
 
-% Compute conservative variables at faces
-qL(1,:) = wL(1,:);
-qL(2,:) = wL(2,:).*wL(1,:);
-qL(3,:) = wL(3,:)./(gamma-1) + 0.5*wL(1,:).*wL(2,:).^2;
+    % Produce reconstruction
+    switch Recon
+        case 'WENO5', [wL,wR] = WENO5recon(w,nx);
+        case 'WENO7', [wL,wR] = WENO7recon(w,nx);
+        case 'Poly5', [wL,wR] = POLY5recon(w,nx);
+        case 'Poly7', [wL,wR] = POLY7recon(w,nx);
+        otherwise, error('reconstruction not available ;P');
+    end
 
-qR(1,:) = wR(1,:);
-qR(2,:) = wR(2,:).*wR(1,:);
-qR(3,:) = wR(3,:)./(gamma-1) + 0.5*wR(1,:).*wR(2,:).^2;
+    % Compute conservative variables at faces
+    qL(1,:) = wL(1,:);
+    qL(2,:) = wL(2,:).*wL(1,:);
+    qL(3,:) = wL(3,:)./(gamma-1) + 0.5*wL(1,:).*wL(2,:).^2;
 
-%% Compute finite volume residual term, df/dx.
+    qR(1,:) = wR(1,:);
+    qR(2,:) = wR(2,:).*wR(1,:);
+    qR(3,:) = wR(3,:)./(gamma-1) + 0.5*wR(1,:).*wR(2,:).^2;
+
+% 3. Compute finite volume residual term, df/dx.
 res=zeros(size(w)); flux=zeros(size(qR)); nf=nx+1-2*R;
 
-% compute flux at j+1/2
-for j = 1:nf % for all interior faces 
-    switch fluxMethod
-        case 'LF',  flux(:,j) = LFflux(qL(:,j),qR(:,j),a); % LF
-        case 'ROE', flux(:,j) = ROEflux(qL(:,j),qR(:,j));  % Roe
-        case 'RUS', flux(:,j) = RUSflux(qL(:,j),qR(:,j));  % Rusanov
-        case 'HLLE',flux(:,j) = HLLEflux(qL(:,j),qR(:,j)); % HLLE
-        case 'AUSM',flux(:,j) = AUSMflux(qL(:,j),qR(:,j)); % AUSM
-        case 'HLLC',flux(:,j) = HLLCflux(qL(:,j),qR(:,j)); % HLLC
+    % compute flux at j+1/2
+    for j = 1:nf % for all interior faces 
+        switch fluxMethod
+            case 'LF',  flux(:,j) = LFflux(qL(:,j),qR(:,j),a); % LF
+            case 'ROE', flux(:,j) = ROEflux(qL(:,j),qR(:,j));  % Roe
+            case 'RUS', flux(:,j) = RUSflux(qL(:,j),qR(:,j));  % Rusanov
+            case 'HLLE',flux(:,j) = HLLEflux(qL(:,j),qR(:,j)); % HLLE
+            case 'AUSM',flux(:,j) = AUSMflux(qL(:,j),qR(:,j)); % AUSM
+            case 'HLLC',flux(:,j) = HLLCflux(qL(:,j),qR(:,j)); % HLLC
+        end
     end
-end
 
-% Flux contribution to the residual of every cell
-res(:,R+1) = res(:,R+1) - flux(:,1)/dx; % left face of cell j=4.
-for j = 2:nf-1 % for all interior faces 
-    res(:,j+R-1) = res(:,j+R-1) + flux(:,j)/dx;
-    res(:, j+R ) = res(:, j+R ) - flux(:,j)/dx;
-end
-res(:,nx-R)= res(:,nx-R)+ flux(:,nf)/dx; % right face of cell j=N-3.
+    % Flux contribution to the residual of every cell
+    res(:,R+1) = res(:,R+1) - flux(:,1)/dx; % left face of cell j=4.
+    for j = 2:nf-1 % for all interior faces 
+        res(:,j+R-1) = res(:,j+R-1) + flux(:,j)/dx;
+        res(:, j+R ) = res(:, j+R ) - flux(:,j)/dx;
+    end
+    res(:,nx-R)= res(:,nx-R)+ flux(:,nf)/dx; % right face of cell j=N-3.
 
 end % FVM WENO
 
