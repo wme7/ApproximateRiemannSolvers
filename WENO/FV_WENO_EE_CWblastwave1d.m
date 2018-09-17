@@ -22,12 +22,11 @@ clear; %close all; clc;
 global gamma
 
 %% Parameters
-CFL     = 0.50;	  % CFL number;
+CFL     = 0.60;	  % CFL number;
 tFinal	= 0.038;  % Final time;
 nx      = 400;    % Number of cells;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
-IC      = 01;	  % 10 IC cases are available;
-fluxMth ='RUS';   % ROE, LF, RUS, AUSM, HLLE, HLLC;
+fluxMth ='HLLE';   % ROE, LF, RUS, AUSM, HLLE, HLLC;
 reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Plot evolution
 
@@ -52,6 +51,13 @@ q0=zeros(3,nx); q0(:,in)=Q0;
 
 % Initial time step
 lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;
+
+% Select Solver
+solver = 2;
+switch solver
+    case 1, FV_EE1d = @FV_WENO_EE1d; % The component-wise solver
+    case 2, FV_EE1d = @FV_WENO_charWise_EE1d; % The characteristic-wise solver
+end
 
 %% Solver Loop
 
