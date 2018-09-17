@@ -43,7 +43,7 @@ CFL     = 0.50;	  % CFL number;
 tFinal	= 0.12;	  % Final time;
 nx      = 201;    % Number of nodes;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
-IC      = 01;	  % 10 IC cases are available;
+IC      = 08;	  % 10 IC cases are available;
 fsplit  ='LF';    % LF, RUS, SHLL; 
 recon   ='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;
@@ -72,7 +72,7 @@ q0=zeros(3,nx); q0(:,in)=Q0;
 lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;  % using the system's largest eigenvalue
 
 % Select Solver
-solver = 2;
+solver = 1;
 switch solver
     case 1, FD_EE1d = @FD_WENO_EE1d; % The component-wise solver
     case 2, FD_EE1d = @FD_WENO_charWise_EE1d; % The characteristic-wise solver

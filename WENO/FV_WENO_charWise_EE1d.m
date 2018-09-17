@@ -409,24 +409,22 @@ function [qL,qR] = WENO5charWiseRecon(q,N)
 global gamma
 
 R=3; E=3; I=R+1:N-R; % R: substencil size, E: system components;
-epweno=1E-40;
-gamma1=gamma-1;
-averageMth='roe';
+epweno=1E-40; gamma1=gamma-1;
 
-qr=zeros(size(q));
-ql=zeros(size(q));
 qR=zeros(size(q));
 qL=zeros(size(q));
+
+averageMth='roe';
 evr=zeros(3,3,N);
 evl=zeros(3,3,N);
 
 % Compute eigenvectors at the cell interfaces j+1/2
-for i = I
+for i = 2:N
     switch averageMth
         case 'simple' % Use simple averages
-            r = (q(1,i)+q(1,i-1))/2;
-            u = (q(2,i)+q(2,i-1))/(2*r);
-            E = (q(3,i)+q(3,i-1))/2;
+            r = (q(1,i-1)+q(1,i))/2;
+            u = (q(2,i-1)+q(2,i))/(2*r);
+            E = (q(3,i-1)+q(3,i))/2;
             p = gamma1*(E - 0.5*r*u^2);
             H = (E+p)/r;
             c2 = gamma1*(H - 0.5*u^2);
@@ -481,8 +479,9 @@ end
 dq = q(:,2:N)-q(:,1:N-1); % dq_{j+1/2}
     
 % Compute the part of the reconstruction that is stencil-independent
-qR(:,I) = (-q(:,I-2)+7*(q(:,I-1)+q(:,I))-q(:,I+1))/12;
-qL(:,I-1) = qR(:,I);
+qL(:,I) = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; % dq_{j+1/2}^{-}
+qR(:,I) = (-q(:,I-2)+7*(q(:,I-1)+q(:,I))-q(:,I+1))/12; % dq_{j+1/2}^{+}
+
 
 % Produce the WENO reconstruction
 for ip=1:E
@@ -509,25 +508,21 @@ for ip=1:E
 
         for i=R:N-R+1
 
-            t1=im*(qs(in2,i)-qs(in1,i));
-            t2=im*(qs(in1,i)-qs(R, i ));
-            t3=im*(qs(R, i )-qs(i1,i ));
+            AmB=im*(qs(in2,i)-qs(in1,i));
+            BmC=im*(qs(in1,i)-qs(R, i ));
+            CmD=im*(qs(R, i )-qs(i1,i ));
 
-            IS1=13.*t1^2+3.*(   qs(in2,i)-3.*qs(in1,i))^2;
-            IS2=13.*t2^2+3.*(   qs(in1,i)+   qs(R, i ))^2;
-            IS3=13.*t3^2+3.*(3.*qs(R, i )-   qs(i1,i ))^2;
+            IS1=13.*AmB^2+3.*(   qs(in2,i)-3.*qs(in1,i))^2;
+            IS2=13.*BmC^2+3.*(   qs(in1,i)+   qs(R, i ))^2;
+            IS3=13.*CmD^2+3.*(3.*qs(R, i )-   qs(i1,i ))^2;
 
             IS1=(epweno+IS1)^2;
             IS2=(epweno+IS2)^2;
             IS3=(epweno+IS3)^2;
-            s1 =IS2*IS3;
-            s2 =6.*IS1*IS3;
-            s3 =3.*IS1*IS2;
-            t0 =1./(s1+s2+s3);
-            s1 =s1*t0;
-            s3 =s3*t0;
+            s1=IS2*IS3; s2=6.*IS1*IS3; s3=3.*IS1*IS2;
+            st0=1/(s1+s2+s3); s1=s1*st0; s3=s3*st0;
 
-            h(idx,i) = (s1*(t2-t1)+(0.5*s3-0.25)*(t3-t2))/3.;
+            h(idx,i) = (s1*(BmC-AmB)+(0.5*s3-0.25)*(CmD-BmC))/3.;
 
         end % loop over interfaces
     end % loop over which side of interface
@@ -535,8 +530,8 @@ for ip=1:E
     % Project to the physical space:
     for e = 1:E
         for i=R:N-R+1
-            qr(e,i-1) = qr(e,i-1) + evr(e,ip,i)*h(1,i);
-            ql(e, i ) = ql(e, i ) + evr(e,ip,i)*h(2,i);
+            qR(e,i-1) = qR(e,i-1) + evr(e,ip,i)*h(1,i);
+            qL(e, i ) = qL(e, i ) + evr(e,ip,i)*h(2,i);
         end 
     end
     

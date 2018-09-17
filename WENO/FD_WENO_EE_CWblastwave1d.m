@@ -43,7 +43,7 @@ CFL     = 0.50;	  % CFL number;
 tFinal	= 0.038;	  % Final time;
 nx      = 401;    % Number of nodes;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
-fsplit  ='RUS';    % LF, RUS, SHLL; 
+fsplit  ='LF';    % LF, RUS, SHLL; 
 recon   ='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;
 
@@ -57,7 +57,7 @@ a0 = sqrt(gamma*p0./r0);   % Speed of sound
 Q0=[r0; r0.*u0; E0];   % vec. of conserved properties
 
 % Load reference solution
-load('CWblastwaveRef.mat'); xe=x; re=r; pe=p; ue=u; ee = p./((gamma-1)*r);
+load('CWblastwaveRef.mat'); xe=x; re=r; pe=p; ue=u; ee = p./((gamma-1)*r); %tFinal=0.2;
 
 % Set q-array & adjust grid for ghost cells
 switch recon
@@ -68,6 +68,14 @@ q0=zeros(3,nx); q0(:,in)=Q0;
 
 % Discretize time domain
 lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;  % using the system's largest eigenvalue
+
+% Select Solver
+solver = 1;
+switch solver
+    case 1, FD_EE1d = @FD_WENO_EE1d; % The component-wise solver
+    case 2, FD_EE1d = @FD_WENO_charWise_EE1d; % The characteristic-wise solver
+    case 3, FD_EE1d = @FD_WENO_EE1d_PeriodicBCs; % Solver with periodic BCs
+end
 
 %% Solver Loop
 
@@ -82,13 +90,13 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    L=FD_WENO_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = qo-dt*L; 
+    L=FD_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = qo-dt*L; 
     
     % 2nd Stage
-    L=FD_WENO_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = 0.75*qo+0.25*(q-dt*L);
+    L=FD_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = 0.75*qo+0.25*(q-dt*L);
 
     % 3rd stage
-    L=FD_WENO_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = (qo+2*(q-dt*L))/3;
+    L=FD_EE1d(lambda,q,nx,dx,fsplit,recon,'CWblastwave');	q = (qo+2*(q-dt*L))/3;
    
     % compute primary properties
     r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2);

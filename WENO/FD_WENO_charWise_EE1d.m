@@ -164,7 +164,7 @@ R=3; I=R:N-R; % nf=N+1-2*R; % All internal faces
 epweno=1E-40; gamma1=gamma-1;
 
 % Eigenvalues parameters
-averageMth='simple';
+averageMth='roe';
 evr=zeros(3,3,N-1);
 evl=zeros(3,3,N-1);
 
