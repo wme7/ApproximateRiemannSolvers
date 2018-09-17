@@ -15,8 +15,8 @@ global gamma preshock postshock mesh_wedge_position
 %     j  j+1            faces 3 and N-3, are the real boundary faces.
 %
 %   q = cat(3, r, ru, rv, E);
-%   F = cat(3, ru, ru^2+p, ruv, ru(E+p));
-%   G = cat(3, rv, ruv, rv^2+p, rv(E+p));
+%   F = cat(3, ru, ru^2+p, ruv, u(E+p));
+%   G = cat(3, rv, ruv, rv^2+p, v(E+p));
 
 % Identify number of gost cells
 switch Recon

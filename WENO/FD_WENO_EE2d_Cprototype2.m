@@ -1,4 +1,4 @@
-function res = FD_WENO_EE2d_Cprototype(q,a,nx,ny,dx,dy,t,fsplitMth,Recon,Test)
+function res = FD_WENO_EE2d_Cprototype2(q,a,nx,ny,dx,dy,t,fsplitMth,Recon,Test)
 % Compute RHS of the semi-discrete form of the Euler equations.
 global preshock postshock mesh_wedge_position
 
@@ -129,7 +129,7 @@ global preshock postshock mesh_wedge_position
     end
 
 % 6. Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
-    parfor e=1:E
+    for e=1:E
         switch Recon
             case 'WENO5', [flux(e,:)] = WENO5recon_Y(fp(:,:,e),fm(:,:,e),ny);
             case 'WENO7', [flux(e,:)] = WENO7recon_Y(fp(:,:,e),fm(:,:,e),ny);

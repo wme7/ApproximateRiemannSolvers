@@ -35,7 +35,7 @@ ny      = 060;    % Number of cells/Elements in y;
 n       = 5;      % Degrees of freedom: ideal air=5, monoatomic gas=3;
 fluxMth ='LF';    % LF, RUS, ROE, HLLE, HLLC;
 reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
-plotFig = false;  % Visualize evolution of domain.
+plotFig = true ;  % Visualize evolution of domain.
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -85,8 +85,9 @@ end
 % Select Solver
 solver = 2;
 switch solver
-    case 1, FV_EE2d = @FV_WENO_EE2d; % The orignal solver
-    case 2, FV_EE2d = @FV_WENO_EE2d_Cprototype; % The prototype for C
+    case 1, FV_EE2d = @FV_WENO_EE2d; % The orignal solver;
+    case 2, FV_EE2d = @FV_WENO_EE2d_Cprototype; % The prototype for C;
+    case 3, FV_EE2d = @FV_WENO_EE2d_Cprototype2; % The prototype for C v2;
 end
 
 %% Solver Loop

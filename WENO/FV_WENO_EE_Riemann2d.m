@@ -34,7 +34,7 @@ nx      = 200;      % Number of cells/Elements in x
 ny      = 200;      % Number of cells/Elements in y
 n       = 5;        % Degrees of freedom: ideal air=5, monoatomic gas=3.
 IC      = 05;       % 19 IC cases are available
-fluxMth ='HLLE';    % LF, RUS, ROE, HLLE, HLLC.
+fluxMth ='LF';    % LF, RUS, ROE, HLLE, HLLC.
 reconMth='WENO7';   % WENO5, WENO7, Poly5, Poly7;
 plotFig = false;     % Visualize evolution of domain
 
@@ -66,7 +66,7 @@ dt0=CFL*min(dx./a0,dy./a0);
 
 % Initialize parpool
 poolobj = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(poolobj); parpool('local',4); end
+if isempty(poolobj); parpool('local',2); end
 
 % Configure figure 
 if plotFig
@@ -78,10 +78,11 @@ if plotFig
 end
 
 % Select Solver
-solver = 2;
+solver = 3;
 switch solver
-    case 1, FV_EE2d = @FV_WENO_EE2d; % The orignal solver
-    case 2, FV_EE2d = @FV_WENO_EE2d_Cprototype; % The prototype for C
+    case 1, FV_EE2d = @FV_WENO_EE2d; % The orignal solver;
+    case 2, FV_EE2d = @FV_WENO_EE2d_Cprototype; % The prototype for C;
+    case 3, FV_EE2d = @FV_WENO_EE2d_Cprototype2; % The prototype for C v2;
 end
 
 %% Solver Loop
@@ -132,7 +133,7 @@ cputime = toc; disp(['CPU time: ',num2str(cputime),' s']);
 q=q(in,jn,:); nx=nx-2*R; ny=ny-2*R; 
 
 % compute flow properties
-r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r; p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2));
+r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4); p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2));
 
 %% Calculation of flow parameters
 c = sqrt(gamma*p./r);   % Speed of sound

@@ -476,13 +476,12 @@ end
 dq = q(:,2:N)-q(:,1:N-1); % dq_{j+1/2}
     
 % Compute the part of the reconstruction that is stencil-independent
-qL = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; qL=qR;% dq_{j+1/2}^{-}
-%qR = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; % dq_{j+1/2}^{+}
+qL = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; qR = qL; % dq_{j+1/2}
 
 % Produce the WENO reconstruction
 for ip=1:E
     
-    % Project the jumps at faces to the left characteristic field: qs
+    % Project the jumps at faces to the left characteristic space: qs
     for m2 =-2:2
        for i = I
           qs(m2+R,i) = 0;
