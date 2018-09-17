@@ -27,7 +27,7 @@ tFinal	= 0.20;	  % Final time;
 nx      = 200;    % Number of cells;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
 IC      = 01;	  % 10 IC cases are available;
-fluxMth ='HLLC';  % ROE, LF, RUS, AUSM, HLLE, HLLC;
+fluxMth ='LF';  % ROE, LF, RUS, AUSM, HLLE, HLLC;
 reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Plot evolution
 
@@ -36,14 +36,14 @@ Lx=1; dx=Lx/nx; xc=dx/2:dx:Lx;
 
 % Set IC
 [r0,u0,p0] = Euler_Riemann_IC1d(xc,IC);
-E0 = p0./((gamma-1)*r0)+0.5*u0.^2;  % Total Energy density
-a0 = sqrt(gamma*p0./r0);            % Speed of sound
-Q0=[r0; r0.*u0; r0.*E0];            % vec. of conserved properties
+E0 = p0./((gamma-1))+0.5*r0.*u0.^2;  % Total Energy density
+a0 = sqrt(gamma*p0./r0);  % Speed of sound
+Q0 = [r0; r0.*u0; E0];  % vec. of conserved properties
 
 % Exact solution
 [xe,re,ue,pe,ee,te,Me,se] = ...
    EulerExact(r0(1),u0(1),p0(1),r0(nx),u0(nx),p0(nx),tFinal);
-Ee = pe./((gamma-1)*re)+0.5*ue.^2;
+Ee = pe./(gamma-1)+0.5*re.*ue.^2;
 
 % Set q-array & adjust grid for ghost cells
 switch reconMth
@@ -84,7 +84,7 @@ while t<tFinal
     L=FV_EE1d(q,lambda,nx,dx,fluxMth,reconMth,'Riemann'); q=(qo+2*(q-dt*L))/3;
 
     % compute flow properties
-    r=q(1,:); u=q(2,:)./r; E=q(3,:)./r; p=(gamma-1)*r.*(E-0.5*u.^2); a=sqrt(gamma*p./r);
+    r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2); a=sqrt(gamma*p./r);
     
     % Update dt and time
     lambda=max(abs(u)+a); dt=CFL*dx/lambda;
@@ -93,7 +93,7 @@ while t<tFinal
 	it=it+1;
     
     % Plot figure
-    if plotFig && rem(it,10) == 0
+    if plotFig && rem(it,2) == 0
         subplot(2,2,1); plot(xc,r(in),'.b',xe,re);
         subplot(2,2,2); plot(xc,u(in),'.m',xe,ue);
         subplot(2,2,3); plot(xc,p(in),'.k',xe,pe);
@@ -106,7 +106,7 @@ end
 q=q(:,in); nx=nx-2*R; 
 
 % compute flow properties
-r=q(1,:); u=q(2,:)./r; E=q(3,:)./r; p=(gamma-1)*r.*(E-0.5*u.^2);
+r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2);
 
 %% PostProcess
 

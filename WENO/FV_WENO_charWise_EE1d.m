@@ -61,7 +61,7 @@ function res = FV_WENO_charWise_EE1d(q,a,nx,dx,fluxMethod,Recon,test)
     end
 
 % 3. Compute finite volume residual term, df/dx.
-res=zeros(size(w)); flux=zeros(size(qR)); nf=nx+1-2*R;
+res=zeros(size(q)); flux=zeros(size(qR)); nf=nx+1-2*R;
 
     % compute flux at j+1/2
     for j = 1:nf % for all interior faces 
@@ -408,15 +408,13 @@ function [qL,qR] = WENO5charWiseRecon(q,N)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 global gamma
 
-R=3; E=3; I=R+1:N-R; % R: substencil size, E: system components;
+R=3; E=3; I=R:N-R; % R: substencil size, E: system components;
 epweno=1E-40; gamma1=gamma-1;
 
-qR=zeros(size(q));
-qL=zeros(size(q));
-
 averageMth='roe';
-evr=zeros(3,3,N);
-evl=zeros(3,3,N);
+evr=zeros(3,3,N-1);
+evl=zeros(3,3,N-1);
+h=zeros(2,N-1);
 
 % Compute eigenvectors at the cell interfaces j+1/2
 for i = 2:N
@@ -443,7 +441,6 @@ for i = 2:N
     
     % Compute properties at cell interfaces using Roe avegares
     
-
     % Construct matrix of right eigenvectors
     %      _                    _ 
     %     |                      |
@@ -454,7 +451,7 @@ for i = 2:N
     %     |  H-uc   u^2/2   H+uc |
     %     |_                    _|
     
-    evr(:,:,i) = [...
+    evr(:,:,i-1) = [...
           1  ,  1  ,  1   ;...
          u-c ,  u  , u+c  ;...
         H-u*c,u^2/2,H+u*c];
@@ -469,7 +466,7 @@ for i = 2:N
     %                         | -uc/(gamma-1)+u^2/2   c/(gamma-1)-u   1 |
     %                         |_                                       _|
 
-    evl(:,:,i) = gamma1/(2*c^2)*[...
+    evl(:,:,i-1) = gamma1/(2*c^2)*[...
          c*u/gamma1+u^2/2,-(c/gamma1+u), 1 ;...
               2*(H-u^2)  ,    2*u      ,-2 ;...
         -c*u/gamma1+u^2/2, c/gamma1-u  , 1];
@@ -479,20 +476,18 @@ end
 dq = q(:,2:N)-q(:,1:N-1); % dq_{j+1/2}
     
 % Compute the part of the reconstruction that is stencil-independent
-qL(:,I) = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; % dq_{j+1/2}^{-}
-qR(:,I) = (-q(:,I-2)+7*(q(:,I-1)+q(:,I))-q(:,I+1))/12; % dq_{j+1/2}^{+}
-
+qL = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; % dq_{j+1/2}^{-}
+qR = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; % dq_{j+1/2}^{+}
 
 % Produce the WENO reconstruction
 for ip=1:E
     
-    % Project the difference of the cell averages to the 'm'th
-    % characteristic field: qs
-    for m2 = -2:2
-       for  i = R+1:N-2
-          qs(m2+3,i) = 0;
+    % Project the jumps at faces to the left characteristic field: qs
+    for m2 =-2:2
+       for i = I
+          qs(m2+R,i) = 0;
           for e=1:E      
-            qs(m2+3,i) = qs(m2+3,i) + evl(ip,e,i)*dqmh(e,i+m2);
+            qs(m2+R,i) = qs(m2+R,i) + evl(ip,e,i)*dq(e,i+m2);
           end
        end
     end
@@ -500,41 +495,39 @@ for ip=1:E
     % the reconstruction
     for idx=1:2
 
-        % idx=1: construct hn (qr)
-        % idx=2: construct hp (ql)
+        % idx=1: construct hn (qL)
+        % idx=2: construct hp (qR)
 
-        im=(-1)^(idx+1);
-        i1=im+R; in1=-im+R; in2=-2*im+R;
+        im=(-1)^(idx+1); i1=im+R; in1=-im+R; in2=-2*im+R;
 
-        for i=R:N-R+1
+        for i=I
 
             AmB=im*(qs(in2,i)-qs(in1,i));
-            BmC=im*(qs(in1,i)-qs(R, i ));
-            CmD=im*(qs(R, i )-qs(i1,i ));
+            BmC=im*(qs(in1,i)-qs( R ,i));
+            CmD=im*(qs( R ,i)-qs( i1,i));
 
-            IS1=13.*AmB^2+3.*(   qs(in2,i)-3.*qs(in1,i))^2;
-            IS2=13.*BmC^2+3.*(   qs(in1,i)+   qs(R, i ))^2;
-            IS3=13.*CmD^2+3.*(3.*qs(R, i )-   qs(i1,i ))^2;
+            IS1=13*AmB^2+3*(  qs(in2,i)-3*qs(in1,i))^2;
+            IS2=13*BmC^2+3*(  qs(in1,i)+  qs( R ,i))^2;
+            IS3=13*CmD^2+3*(3*qs( R ,i)-  qs( i1,i))^2;
 
             IS1=(epweno+IS1)^2;
             IS2=(epweno+IS2)^2;
             IS3=(epweno+IS3)^2;
-            s1=IS2*IS3; s2=6.*IS1*IS3; s3=3.*IS1*IS2;
+            s1=IS2*IS3; s2=6*IS1*IS3; s3=3*IS1*IS2;
             st0=1/(s1+s2+s3); s1=s1*st0; s3=s3*st0;
 
-            h(idx,i) = (s1*(BmC-AmB)+(0.5*s3-0.25)*(CmD-BmC))/3.;
+            h(idx,i) = (s1*(BmC-AmB)+(0.5*s3-0.25)*(CmD-BmC))/3;
 
         end % loop over interfaces
-    end % loop over which side of interface
+    end % loop over each side of interface
 
     % Project to the physical space:
-    for e = 1:E
-        for i=R:N-R+1
-            qR(e,i-1) = qR(e,i-1) + evr(e,ip,i)*h(1,i);
-            qL(e, i ) = qL(e, i ) + evr(e,ip,i)*h(2,i);
-        end 
+    for e=1:E
+        for i=I
+            qL(e,i+1-R) = qL(e,i+1-R) + evr(e,ip,i)*h(1,i);
+            qR(e,i+1-R) = qR(e,i+1-R) + evr(e,ip,i)*h(2,i);
+        end
     end
-    
-end 
+end
 
 end

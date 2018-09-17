@@ -39,7 +39,7 @@ clear; close all; clc;
 global gamma
 
 %% Parameters
-CFL     = 0.50;	  % CFL number;
+CFL     = 0.10;	  % CFL number;
 tFinal	= 0.038;	  % Final time;
 nx      = 401;    % Number of nodes;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
@@ -70,7 +70,7 @@ q0=zeros(3,nx); q0(:,in)=Q0;
 lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;  % using the system's largest eigenvalue
 
 % Select Solver
-solver = 1;
+solver = 2;
 switch solver
     case 1, FD_EE1d = @FD_WENO_EE1d; % The component-wise solver
     case 2, FD_EE1d = @FD_WENO_charWise_EE1d; % The characteristic-wise solver
@@ -109,7 +109,7 @@ while t<tFinal
 	it=it+1;
     
     % Plot figure
-    if plotFig && rem(it,10) == 0
+    if plotFig && rem(it,1) == 0
         subplot(2,2,1); plot(xi,r(in),'.b');
         subplot(2,2,2); plot(xi,u(in),'.m');
         subplot(2,2,3); plot(xi,p(in),'.k');
