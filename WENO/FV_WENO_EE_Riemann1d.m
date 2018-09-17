@@ -28,7 +28,7 @@ nx      = 200;    % Number of cells;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
 IC      = 01;	  % 10 IC cases are available;
 fluxMth ='HLLC';  % ROE, LF, RUS, AUSM, HLLE, HLLC;
-reconMth='WENO7'; % WENO5, WENO7, Poly5, Poly7;
+reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Plot evolution
 
 % Discretize spatial domain
@@ -55,6 +55,13 @@ q0=zeros(3,nx); q0(:,in)=Q0;
 % Initial time step
 lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;
 
+% Select Solver
+solver = 2;
+switch solver
+    case 1, FV_EE1d = @FV_WENO_EE1d; % The component-wise solver
+    case 2, FV_EE1d = @FV_WENO_charWise_EE1d; % The characteristic-wise solver
+end
+
 %% Solver Loop
 
 % Load IC
@@ -68,13 +75,13 @@ while t<tFinal
     qo = q;
     
     % 1st stage
-    L=FV_WENO_EE1d(q,lambda,nx,dx,fluxMth,reconMth,'Riemann'); q=qo-dt*L;
+    L=FV_EE1d(q,lambda,nx,dx,fluxMth,reconMth,'Riemann'); q=qo-dt*L;
 
     % 2nd Stage
-    L=FV_WENO_EE1d(q,lambda,nx,dx,fluxMth,reconMth,'Riemann'); q=0.75*qo+0.25*(q-dt*L);
+    L=FV_EE1d(q,lambda,nx,dx,fluxMth,reconMth,'Riemann'); q=0.75*qo+0.25*(q-dt*L);
 
     % 3rd stage
-    L=FV_WENO_EE1d(q,lambda,nx,dx,fluxMth,reconMth,'Riemann'); q=(qo+2*(q-dt*L))/3;
+    L=FV_EE1d(q,lambda,nx,dx,fluxMth,reconMth,'Riemann'); q=(qo+2*(q-dt*L))/3;
 
     % compute flow properties
     r=q(1,:); u=q(2,:)./r; E=q(3,:)./r; p=(gamma-1)*r.*(E-0.5*u.^2); a=sqrt(gamma*p./r);
