@@ -23,10 +23,10 @@ global gamma
 
 %% Parameters
 CFL     = 0.55;	  % CFL number;
-tFinal	= 0.20;	  % Final time;
+tFinal	= 0.12;	  % Final time;
 nx      = 200;    % Number of cells;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
-IC      = 01;	  % 10 IC cases are available;
+IC      = 08;	  % 10 IC cases are available;
 fluxMth ='LF';  % ROE, LF, RUS, AUSM, HLLE, HLLC;
 reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Plot evolution
@@ -43,7 +43,6 @@ Q0 = [r0; r0.*u0; E0];  % vec. of conserved properties
 % Exact solution
 [xe,re,ue,pe,ee,te,Me,se] = ...
    EulerExact(r0(1),u0(1),p0(1),r0(nx),u0(nx),p0(nx),tFinal);
-Ee = pe./(gamma-1)+0.5*re.*ue.^2;
 
 % Set q-array & adjust grid for ghost cells
 switch reconMth
@@ -84,7 +83,8 @@ while t<tFinal
     L=FV_EE1d(q,lambda,nx,dx,fluxMth,reconMth,'Riemann'); q=(qo+2*(q-dt*L))/3;
 
     % compute flow properties
-    r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2); a=sqrt(gamma*p./r);
+    r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2); 
+    a=sqrt(gamma*p./r); if min(p)<0; error('negative pressure found!'); end
     
     % Update dt and time
     lambda=max(abs(u)+a); dt=CFL*dx/lambda;
@@ -93,11 +93,11 @@ while t<tFinal
 	it=it+1;
     
     % Plot figure
-    if plotFig && rem(it,2) == 0
-        subplot(2,2,1); plot(xc,r(in),'.b',xe,re);
-        subplot(2,2,2); plot(xc,u(in),'.m',xe,ue);
-        subplot(2,2,3); plot(xc,p(in),'.k',xe,pe);
-        subplot(2,2,4); plot(xc,E(in),'.r',xe,Ee);
+    if plotFig && rem(it,10) == 0
+        subplot(2,2,1); plot(xc,r(in),'.b');
+        subplot(2,2,2); plot(xc,u(in),'.m');
+        subplot(2,2,3); plot(xc,p(in),'.k');
+        subplot(2,2,4); plot(xc,E(in),'.r');
         drawnow
     end
 end
@@ -110,11 +110,22 @@ r=q(1,:); u=q(2,:)./r; E=q(3,:); p=(gamma-1)*(E-0.5*r.*u.^2);
 
 %% PostProcess
 
+% Calculation of flow parameters
+a = sqrt(gamma*p./r); M = u./a; % Mach number [-]
+p_ref = 101325;           % Reference air pressure (N/m^2)
+r_ref = 1.225;            % Reference air density (kg/m^3)
+s_ref = 1/(gamma-1)*(log(p/p_ref)+gamma*log(r_ref./r)); 
+                          % Entropy w.r.t reference condition
+s = log(p./r.^gamma);     % Dimensionless Entropy
+Q = r.*u;                 % Mass Flow rate per unit area
+e = p./((gamma-1)*r);     % internal Energy
+
 % Plots results
 figure(1);
-s1=subplot(2,2,1); plot(xc,r,'ro',xe,re,'-k'); xlabel('x'); ylabel('\rho, density'); 
-legend(['FV-',reconMth,'-',fluxMth],'Exact'); legend boxoff;
-s2=subplot(2,2,2); plot(xc,u,'ro',xe,ue,'-k'); xlabel('x'); ylabel('u, velocity'); 
-s3=subplot(2,2,3); plot(xc,p,'ro',xe,pe,'-k'); xlabel('x'); ylabel('p, pressure');
-s4=subplot(2,2,4); plot(xc,E,'ro',xe,Ee,'-k'); xlabel('x'); ylabel('E, energy');
+s1=subplot(2,3,1); plot(xc,r,'or',xe,re,'k'); xlabel('x(m)'); ylabel('Density (kg/m^3)');
+s2=subplot(2,3,2); plot(xc,u,'or',xe,ue,'k'); xlabel('x(m)'); ylabel('Velocity (m/s)');
+s3=subplot(2,3,3); plot(xc,p,'or',xe,pe,'k'); xlabel('x(m)'); ylabel('Pressure (Pa)');
+s4=subplot(2,3,4); plot(xc,s,'or',xe,se,'k'); xlabel('x(m)'); ylabel('Entropy/R gas');
+s5=subplot(2,3,5); plot(xc,M,'or',xe,Me,'k'); xlabel('x(m)'); ylabel('Mach number');
+s6=subplot(2,3,6); plot(xc,e,'or',xe,ee,'k'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
 title(s1,['FV-',reconMth,'-',fluxMth,' Euler Eqns.']); title(s2,['time t=',num2str(t),'[s]']);
