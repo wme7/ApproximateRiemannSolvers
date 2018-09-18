@@ -15,8 +15,8 @@ global gamma preshock postshock mesh_wedge_position
 %     j  j+1            faces 3 and N-3, are the real boundary faces.
 %
 %   q = cat(3, r, ru, rv, E);
-%   F = cat(3, ru, ru^2+p, ruv, u(E+p));
-%   G = cat(3, rv, ruv, rv^2+p, v(E+p));
+%   F = cat(3, ru, ru^2+p, ruv, ru(E+p));
+%   G = cat(3, rv, ruv, rv^2+p, rv(E+p));
 
 % Identify number of gost cells
 switch Recon
@@ -31,7 +31,7 @@ switch Test
             q(:,i,:)=q(:,nx-R+i,:); q(:,nx-2*R+i,:)=q(:,R+i,:);	% Periodic BCs
         end
         for j=1:R
-            q(j,:,:)=q(ny-R+i,:,:); q(ny-2*R+j,:,:)=q(R+j,:,:);	% Periodic BCs
+            q(j,:,:)=q(ny-R+j,:,:); q(ny-2*R+j,:,:)=q(R+j,:,:);	% Periodic BCs
         end
     case 'Riemann' % Set outflow BCs
         for i=1:R
@@ -72,91 +72,108 @@ switch Test
     otherwise, error('Test boundaries not set!');
 end
 
-% internal cells and primitives array
-ic=R+1:ny-R;  %w=zeros(numel(ic),nx,4);
+% Compute primitive variables at solution points
+w(:,:,1) = q(:,:,1);
+w(:,:,2) = q(:,:,2)./q(:,:,1);
+w(:,:,3) = q(:,:,3)./q(:,:,1);
+w(:,:,4) = (gamma-1)*( q(:,:,4) - 0.5*(q(:,:,2).^2+q(:,:,3).^2)./q(:,:,1));
 
 % 1. Reconstruct interface values: qL=q_{i+1/2}^{-} and qR=q_{i-1/2}^{+}
-E=4; % numer of components or layers
-parfor e=1:E
-    switch Recon
-        case 'WENO5', [qL(e,:),qR(e,:)] = WENO5recon_X(q(ic,:,e),nx);
-        case 'WENO7', [qL(e,:),qR(e,:)] = WENO7recon_X(q(ic,:,e),nx);
-        case 'Poly5', [qL(e,:),qR(e,:)] = POLY5recon_X(q(ic,:,e),nx);
-        case 'Poly7', [qL(e,:),qR(e,:)] = POLY7recon_X(q(ic,:,e),nx);
-        otherwise, error('reconstruction not available ;P');
-    end
+switch Recon
+    case 'WENO5', [wL,wR] = WENO5recon_X(w(R+1:ny-R,:,:),nx);
+    case 'WENO7', [wL,wR] = WENO7recon_X(w(R+1:ny-R,:,:),nx);
+    case 'Poly5', [wL,wR] = POLY5recon_X(w(R+1:ny-R,:,:),nx);
+    case 'Poly7', [wL,wR] = POLY7recon_X(w(R+1:ny-R,:,:),nx);
+    otherwise, error('reconstruction not available ;P');
 end
 
+% Compute conservative variables at faces
+qL(:,:,1) = wL(:,:,1);
+qL(:,:,2) = wL(:,:,2).*wL(:,:,1);
+qL(:,:,3) = wL(:,:,3).*wL(:,:,1);
+qL(:,:,4) = wL(:,:,4)./(gamma-1) + 0.5*wL(:,:,1).*(wL(:,:,2).^2+wL(:,:,3).^2);
+
+qR(:,:,1) = wR(:,:,1);
+qR(:,:,2) = wR(:,:,2).*wR(:,:,1);
+qR(:,:,3) = wR(:,:,3).*wR(:,:,1);
+qR(:,:,4) = wR(:,:,4)./(gamma-1) + 0.5*wR(:,:,1).*(wR(:,:,2).^2+wR(:,:,3).^2);
+
 % 2. Compute finite volume residual term, df/dx.
-res=zeros(size(q)); flux=zeros(size(qR)); nc=ny-2*R; nf=nx+1-2*R; N=nc*nf;
+res=zeros(size(q)); flux=zeros(size(qR)); nc=ny-2*R; nf=nx+1-2*R;
 
 % Normal unitary face vectors: (nx,ny)
 % normals = {[1,0], [0,1]}; % i.e.: x-axis, y-axis
 
 % compute flux at (i+1/2,j)
-for c=1:N
-    switch fluxMethod
-        case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[1,0],a); % Lax Friedrichs
-        case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[1,0]);  % Roe
-        case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[1,0]);  % Rusanov
-        case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[1,0]); % HLLE
-        case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[1,0]); % HLLC
-        otherwise, error('flux method not available ;P');
+for j=1:nc % for all interior cells
+    for i=1:nf % for all interior faces 
+        switch fluxMethod
+            case 'LF',  flux(j,i,:) = LFflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0],a); % Lax Friedrichs
+            case 'ROE', flux(j,i,:) = ROEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]);  % Roe
+            case 'RUS', flux(j,i,:) = RUSflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]);  % Rusanov
+            case 'HLLE',flux(j,i,:) = HLLEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]); % HLLE
+            case 'HLLC',flux(j,i,:) = HLLCflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]); % HLLC
+            otherwise, error('flux method not available ;P');
+        end
     end
 end
 
 % Flux contribution to the residual of every cell
-for e=1:E
-    for j=1:nc % for all interior cells
-        res(j+R,R+1,e) = res(j+R,R+1,e) - flux(e,j+nc*(1-1))/dx; % left face of cell j=4.
-        for i = 2:nf-1 % for all interior faces
-            res(j+R,i+R-1,e) = res(j+R,i+R-1,e) + flux(e,j+nc*(i-1))/dx;
-            res(j+R, i+R ,e) = res(j+R, i+R ,e) - flux(e,j+nc*(i-1))/dx;
-        end
-        res(j+R,nx-R,e) = res(j+R,nx-R,e) + flux(e,j+nc*(nf-1))/dx; % right face of cell j=N-3.
+for j=1:nc % for all interior cells
+    res(j+R,R+1,:) = res(j+R,R+1,:) - flux(j,1,:)/dx; % left face of cell j=4.
+    for i = 2:nf-1 % for all interior faces
+        res(j+R,i+R-1,:) = res(j+R,i+R-1,:) + flux(j,i,:)/dx;
+        res(j+R, i+R ,:) = res(j+R, i+R ,:) - flux(j,i,:)/dx;
     end
+    res(j+R,nx-R,:) = res(j+R,nx-R,:) + flux(j,nf,:)/dx; % right face of cell j=N-3.
 end
 
 % Compute primitive variables at solution points (they still in memory)
-clear qL qR wL wR flux;
-
-% internal cells and primitives array
-ic=R+1:nx-R;  %w=zeros(ny,numel(ic),4);
+clear qL qR flux;
 
 % 1. Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
-parfor e=1:E
-    switch Recon
-        case 'WENO5', [qL(e,:),qR(e,:)] = WENO5recon_Y(q(:,ic,e),ny);
-        case 'WENO7', [qL(e,:),qR(e,:)] = WENO7recon_Y(q(:,ic,e),ny);
-        case 'Poly5', [qL(e,:),qR(e,:)] = POLY5recon_Y(q(:,ic,e),ny);
-        case 'Poly7', [qL(e,:),qR(e,:)] = POLY7recon_Y(q(:,ic,e),ny);
-    end
+switch Recon
+    case 'WENO5', [wL,wR] = WENO5recon_Y(w(:,R+1:nx-R,:),ny);
+    case 'WENO7', [wL,wR] = WENO7recon_Y(w(:,R+1:nx-R,:),ny);
+    case 'Poly5', [wL,wR] = POLY5recon_Y(w(:,R+1:nx-R,:),ny);
+    case 'Poly7', [wL,wR] = POLY7recon_Y(w(:,R+1:nx-R,:),ny);
 end
 
+% Compute conservative variables at faces
+qL(:,:,1) = wL(:,:,1);
+qL(:,:,2) = wL(:,:,2).*wL(:,:,1);
+qL(:,:,3) = wL(:,:,3).*wL(:,:,1);
+qL(:,:,4) = wL(:,:,4)./(gamma-1) + 0.5*wL(:,:,1).*(wL(:,:,2).^2+wL(:,:,3).^2);
+
+qR(:,:,1) = wR(:,:,1);
+qR(:,:,2) = wR(:,:,2).*wR(:,:,1);
+qR(:,:,3) = wR(:,:,3).*wR(:,:,1);
+qR(:,:,4) = wR(:,:,4)./(gamma-1) + 0.5*wR(:,:,1).*(wR(:,:,2).^2+wR(:,:,3).^2);
+
 % 2. Compute finite volume residual term, df/dx.
-flux=zeros(size(qL)); nc=nx-2*R; nf=ny+1-2*R; N=nc*nf;
+flux=zeros(size(qL)); nc=nx-2*R; nf=ny+1-2*R;
 
 % compute flux at (i,j+1/2)
-for c=1:N
-    switch fluxMethod
-        case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[0,1],a); % Lax Friedrichs
-        case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[0,1]);  % Roe
-        case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[0,1]);  % Rusanov
-        case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[0,1]); % HLLE
-        case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[0,1]); % HLLC
+for i=1:nc % for all interior cells
+    for j=1:nf % for all interior faces 
+        switch fluxMethod
+            case 'LF',  flux(j,i,:) = LFflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1],a); % Lax Friedrichs
+            case 'ROE', flux(j,i,:) = ROEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]);  % Roe
+            case 'RUS', flux(j,i,:) = RUSflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]);  % Rusanov
+            case 'HLLE',flux(j,i,:) = HLLEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]); % HLLE
+            case 'HLLC',flux(j,i,:) = HLLCflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]); % HLLC
+        end
     end
 end
 
 % Flux contribution to the residual of every cell
-for e=1:E
-    for i=1:nc % for all interior cells
-        res(R+1,i+R,e) = res(R+1,i+R,e) - flux(e,1+nf*(i-1))/dy;
-        for j=2:nf-1 % for all interior cells
-            res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(e,j+nf*(i-1))/dy;
-            res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(e,j+nf*(i-1))/dy;
-        end
-        res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(e,nf+nf*(i-1))/dy;
+for i=1:nc % for all interior cells
+    res(R+1,i+R,:) = res(R+1,i+R,:) - flux(1,i,:)/dy;
+    for j=2:nf-1 % for all interior cells
+        res(j+R-1,i+R,:) = res(j+R-1,i+R,:) + flux(j,i,:)/dy;
+        res( j+R ,i+R,:) = res( j+R ,i+R,:) - flux(j,i,:)/dy;
     end
+    res(ny-R,i+R,:) = res(ny-R,i+R,:) + flux(nf,i,:)/dy;
 end
 
 end % FVM WENO
@@ -497,11 +514,11 @@ function [qn,qp] = WENO5recon_X(w,N)
 I=3:(N-3); % R:3 stencil size
 
 %% Left State Extrapolation $u_{i+1/2}^{-}$
-vmm = reshape(w(:,I-2,:),1,[]);
-vm  = reshape(w(:,I-1,:),1,[]);
-v   = reshape(w(:, I ,:),1,[]);
-vp  = reshape(w(:,I+1,:),1,[]);
-vpp = reshape(w(:,I+2,:),1,[]);
+vmm = w(:,I-2,:);
+vm  = w(:,I-1,:);
+v   = w(:, I ,:);
+vp  = w(:,I+1,:);
+vpp = w(:,I+2,:);
 
 % Smooth Indicators (Beta factors)
 B0n = 13/12*(vmm-2*vm+v  ).^2 + 1/4*(vmm-4*vm+3*v).^2; 
@@ -528,11 +545,11 @@ qn  = w0n.*(2*vmm - 7*vm + 11*v)/6 ...
     + w2n.*(2*v   + 5*vp - vpp )/6;
 
 %% Right State Extrapolation $u_{i+1/2}^{+}$ 
-umm = reshape(w(:,I-1,:),1,[]);
-um  = reshape(w(:, I ,:),1,[]);
-u   = reshape(w(:,I+1,:),1,[]);
-up  = reshape(w(:,I+2,:),1,[]);
-upp = reshape(w(:,I+3,:),1,[]);
+umm = w(:,I-1,:);
+um  = w(:, I ,:);
+u   = w(:,I+1,:);
+up  = w(:,I+2,:);
+upp = w(:,I+3,:);
 
 % Smooth Indicators (Beta factors)
 B0p = 13/12*(umm-2*um+u  ).^2 + 1/4*(umm-4*um+3*u).^2; 
@@ -611,11 +628,11 @@ function [qn,qp] = WENO5recon_Y(w,N)
 I=3:(N-3); % R: stencil size
 
 %% Left State Extrapolation $u_{i+1/2}^{-}$
-vmm = reshape(w(I-2,:,:),1,[]);
-vm  = reshape(w(I-1,:,:),1,[]);
-v   = reshape(w( I ,:,:),1,[]);
-vp  = reshape(w(I+1,:,:),1,[]);
-vpp = reshape(w(I+2,:,:),1,[]);
+vmm = w(I-2,:,:);
+vm  = w(I-1,:,:);
+v   = w( I ,:,:);
+vp  = w(I+1,:,:);
+vpp = w(I+2,:,:);
 
 % Smooth Indicators (Beta factors)
 B0n = 13/12*(vmm-2*vm+v  ).^2 + 1/4*(vmm-4*vm+3*v).^2; 
@@ -642,11 +659,11 @@ qn  = w0n.*(2*vmm - 7*vm + 11*v)/6 ...
     + w2n.*(2*v   + 5*vp - vpp )/6;
 
 %% Right State Extrapolation $u_{i+1/2}^{+}$ 
-umm = reshape(w(I-1,:,:),1,[]);
-um  = reshape(w( I ,:,:),1,[]);
-u   = reshape(w(I+1,:,:),1,[]);
-up  = reshape(w(I+2,:,:),1,[]);
-upp = reshape(w(I+3,:,:),1,[]);
+umm = w(I-1,:,:);
+um  = w( I ,:,:);
+u   = w(I+1,:,:);
+up  = w(I+2,:,:);
+upp = w(I+3,:,:);
 
 % Smooth Indicators (Beta factors)
 B0p = 13/12*(umm-2*um+u  ).^2 + 1/4*(umm-4*um+3*u).^2; 
@@ -678,21 +695,21 @@ function [qn,qp] = POLY5recon_X(w,N)
 I=3:(N-3); % R:3 stencil size
 
 %% Left Flux: f_{i+1/2}^{-}
-vmm = reshape(w(:,I-2,:),1,[]);
-vm  = reshape(w(:,I-1,:),1,[]);
-v   = reshape(w(:, I ,:),1,[]);
-vp  = reshape(w(:,I+1,:),1,[]);
-vpp = reshape(w(:,I+2,:),1,[]);
+vmm = w(:,I-2,:);
+vm  = w(:,I-1,:);
+v   = w(:, I ,:);
+vp  = w(:,I+1,:);
+vpp = w(:,I+2,:);
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{-}$;
 qn = ( 2*vmm - 13*vm + 47*v + 27*vp - 3*vpp)/60;
 
 %% Right Flux: f_{i+1/2}^{+}
-umm = reshape(w(:,I-1,:),1,[]);
-um  = reshape(w(:, I ,:),1,[]);
-u   = reshape(w(:,I+1,:),1,[]);
-up  = reshape(w(:,I+2,:),1,[]);
-upp = reshape(w(:,I+3,:),1,[]);
+umm = w(:,I-1,:);
+um  = w(:, I ,:);
+u   = w(:,I+1,:);
+up  = w(:,I+2,:);
+upp = w(:,I+3,:);
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{+}$;
 qp = (-3*umm + 27*um + 47*u - 13*up + 2*upp)/60;
@@ -703,21 +720,21 @@ function [qn,qp] = POLY5recon_Y(w,N)
 I=3:(N-3); 
 
 %% Left Flux: f_{i+1/2}^{-}
-vmm = reshape(w(I-2,:,:),1,[]);
-vm  = reshape(w(I-1,:,:),1,[]);
-v   = reshape(w( I ,:,:),1,[]);
-vp  = reshape(w(I+1,:,:),1,[]);
-vpp = reshape(w(I+2,:,:),1,[]);
+vmm = w(I-2,:,:);
+vm  = w(I-1,:,:);
+v   = w( I ,:,:);
+vp  = w(I+1,:,:);
+vpp = w(I+2,:,:);
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{-}$;
 qn = ( 2*vmm - 13*vm + 47*v + 27*vp - 3*vpp)/60;
 
 %% Right Flux: f_{i+1/2}^{+}
-umm = reshape(w(I-1,:,:),1,[]);
-um  = reshape(w( I ,:,:),1,[]);
-u   = reshape(w(I+1,:,:),1,[]);
-up  = reshape(w(I+2,:,:),1,[]);
-upp = reshape(w(I+3,:,:),1,[]);
+umm = w(I-1,:,:);
+um  = w( I ,:,:);
+u   = w(I+1,:,:);
+up  = w(I+2,:,:);
+upp = w(I+3,:,:);
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{+}$;
 qp = (-3*umm + 27*um + 47*u - 13*up + 2*upp)/60;
@@ -778,13 +795,13 @@ function [qn,qp] = WENO7recon_X(w,N)
 I=4:(N-4); 
 
 %% Right Flux: f_{i+1/2}^{-}
-vmmm= reshape(w(:,I-3,:),1,[]);
-vmm = reshape(w(:,I-2,:),1,[]);
-vm  = reshape(w(:,I-1,:),1,[]);
-vo  = reshape(w(:, I ,:),1,[]);
-vp  = reshape(w(:,I+1,:),1,[]);
-vpp = reshape(w(:,I+2,:),1,[]);
-vppp= reshape(w(:,I+3,:),1,[]);
+vmmm= w(:,I-3,:);
+vmm = w(:,I-2,:);
+vm  = w(:,I-1,:);
+vo  = w(:, I ,:);
+vp  = w(:,I+1,:);
+vpp = w(:,I+2,:);
+vppp= w(:,I+3,:);
 
 % Smooth Indicators
 B0n = vm.*(134241*vm-114894*vo)   +vmmm.*(56694*vm-47214*vmm+6649*vmmm-22778*vo)...
@@ -819,13 +836,13 @@ qn = w0n.*(-3*vmmm + 13*vmm - 23*vm  + 25*vo  )/12 + ...
      w3n.*( 3*vo   + 13*vp  -  5*vpp +  1*vppp)/12;
 
 %% Left Flux: f_{i+1/2}^{+}
-ummm= reshape(w(:,I-2,:),1,[]);
-umm = reshape(w(:,I-1,:),1,[]);
-um  = reshape(w(:, I ,:),1,[]);
-uo  = reshape(w(:,I+1,:),1,[]);
-up  = reshape(w(:,I+2,:),1,[]);
-upp = reshape(w(:,I+3,:),1,[]);
-uppp= reshape(w(:,I+4,:),1,[]);
+ummm= w(:,I-2,:);
+umm = w(:,I-1,:);
+um  = w(:, I ,:);
+uo  = w(:,I+1,:);
+up  = w(:,I+2,:);
+upp = w(:,I+3,:);
+uppp= w(:,I+4,:);
 
 % Smooth Indicators
 B0p = um.*(134241*um-114894*uo)   +ummm.*(56694*um-47214*umm+6649*ummm-22778*uo)...
@@ -916,13 +933,13 @@ function [qn,qp] = WENO7recon_Y(w,N)
 I=4:(N-4); 
 
 %% Right Flux: f_{i+1/2}^{-}
-vmmm= reshape(w(I-3,:,:),1,[]);
-vmm = reshape(w(I-2,:,:),1,[]);
-vm  = reshape(w(I-1,:,:),1,[]);
-vo  = reshape(w( I ,:,:),1,[]);
-vp  = reshape(w(I+1,:,:),1,[]);
-vpp = reshape(w(I+2,:,:),1,[]);
-vppp= reshape(w(I+3,:,:),1,[]);
+vmmm= w(I-3,:,:);
+vmm = w(I-2,:,:);
+vm  = w(I-1,:,:);
+vo  = w( I ,:,:);
+vp  = w(I+1,:,:);
+vpp = w(I+2,:,:);
+vppp= w(I+3,:,:);
 
 % Smooth Indicators
 B0n = vm.*(134241*vm-114894*vo)   +vmmm.*(56694*vm-47214*vmm+6649*vmmm-22778*vo)...
@@ -957,13 +974,13 @@ qn = w0n.*(-3*vmmm + 13*vmm - 23*vm  + 25*vo  )/12 + ...
      w3n.*( 3*vo   + 13*vp  -  5*vpp +  1*vppp)/12;
 
 %% Left Flux: f_{i+1/2}^{+}
-ummm= reshape(w(I-2,:,:),1,[]);
-umm = reshape(w(I-1,:,:),1,[]);
-um  = reshape(w( I ,:,:),1,[]);
-uo  = reshape(w(I+1,:,:),1,[]);
-up  = reshape(w(I+2,:,:),1,[]);
-upp = reshape(w(I+3,:,:),1,[]);
-uppp= reshape(w(I+4,:,:),1,[]);
+ummm= w(I-2,:,:);
+umm = w(I-1,:,:);
+um  = w( I ,:,:);
+uo  = w(I+1,:,:);
+up  = w(I+2,:,:);
+upp = w(I+3,:,:);
+uppp= w(I+4,:,:);
 
 % Smooth Indicators
 B0p = um.*(134241*um-114894*uo)   +ummm.*(56694*um-47214*umm+6649*ummm-22778*uo)...
@@ -1003,25 +1020,25 @@ function [qn,qp] = POLY7recon_X(w,N)
 I=4:(N-4);  
 
 %% Left Flux: f_{i+1/2}^{-}
-vmmm= reshape(w(:,I-3,:),1,[]);
-vmm = reshape(w(:,I-2,:),1,[]);
-vm  = reshape(w(:,I-1,:),1,[]);
-vo  = reshape(w(:, I ,:),1,[]);
-vp  = reshape(w(:,I+1,:),1,[]);
-vpp = reshape(w(:,I+2,:),1,[]);
-vppp= reshape(w(:,I+3,:),1,[]);
+vmmm= w(:,I-3,:);
+vmm = w(:,I-2,:);
+vm  = w(:,I-1,:);
+vo  = w(:, I ,:);
+vp  = w(:,I+1,:);
+vpp = w(:,I+2,:);
+vppp= w(:,I+3,:);
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{-}$;
 qn = (-3*vmmm + 25*vmm - 101*vm  + 319*vo + 214*vp - 38*vpp + 4*vppp)/420;
 
 %% Right Flux: f_{i+1/2}^{+}
-ummm= reshape(w(:,I-2,:),1,[]);
-umm = reshape(w(:,I-1,:),1,[]);
-um  = reshape(w(:, I ,:),1,[]);
-uo  = reshape(w(:,I+1,:),1,[]);
-up  = reshape(w(:,I+2,:),1,[]);
-upp = reshape(w(:,I+3,:),1,[]);
-uppp= reshape(w(:,I+4,:),1,[]);
+ummm= w(:,I-2,:);
+umm = w(:,I-1,:);
+um  = w(:, I ,:);
+uo  = w(:,I+1,:);
+up  = w(:,I+2,:);
+upp = w(:,I+3,:);
+uppp= w(:,I+4,:);
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{+}$;
 qp = (4*ummm - 38*umm  + 214*um  + 319*uo - 101*up + 25*upp - 3*uppp)/420;
@@ -1032,25 +1049,25 @@ function [qn,qp] = POLY7recon_Y(w,N)
 I=4:(N-4);  
 
 %% Left Flux: f_{i+1/2}^{-}
-vmmm= reshape(w(I-3,:,:),1,[]);
-vmm = reshape(w(I-2,:,:),1,[]);
-vm  = reshape(w(I-1,:,:),1,[]);
-vo  = reshape(w( I ,:,:),1,[]);
-vp  = reshape(w(I+1,:,:),1,[]);
-vpp = reshape(w(I+2,:,:),1,[]);
-vppp= reshape(w(I+3,:,:),1,[]);
+vmmm= w(I-3,:,:);
+vmm = w(I-2,:,:);
+vm  = w(I-1,:,:);
+vo  = w( I ,:,:);
+vp  = w(I+1,:,:);
+vpp = w(I+2,:,:);
+vppp= w(I+3,:,:);
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{-}$;
 qn = (-3*vmmm + 25*vmm - 101*vm  + 319*vo + 214*vp - 38*vpp + 4*vppp)/420;
 
 %% Right Flux: f_{i+1/2}^{+}
-ummm= reshape(w(I-2,:,:),1,[]);
-umm = reshape(w(I-1,:,:),1,[]);
-um  = reshape(w( I ,:,:),1,[]);
-uo  = reshape(w(I+1,:,:),1,[]);
-up  = reshape(w(I+2,:,:),1,[]);
-upp = reshape(w(I+3,:,:),1,[]);
-uppp= reshape(w(I+4,:,:),1,[]);
+ummm= w(I-2,:,:);
+umm = w(I-1,:,:);
+um  = w( I ,:,:);
+uo  = w(I+1,:,:);
+up  = w(I+2,:,:);
+upp = w(I+3,:,:);
+uppp= w(I+4,:,:);
 
 % Numerical Flux at cell boundary, $u_{i+1/2}^{+}$;
 qp = (4*ummm - 38*umm  + 214*um  + 319*uo - 101*up + 25*upp - 3*uppp)/420;

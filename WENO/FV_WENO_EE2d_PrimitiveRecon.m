@@ -147,7 +147,7 @@ w(:,:,3) = q(:,ic,3)./q(:,ic,1);
 w(:,:,4) = (gamma-1)*( q(:,ic,4) - 0.5*(q(:,ic,2).^2+q(:,ic,3).^2)./q(:,ic,1));
 
 % 1. Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
-for e=1:E
+parfor e=1:E
     switch Recon
         case 'WENO5', [wL(e,:),wR(e,:)] = WENO5recon_Y(w(:,:,e),ny);
         case 'WENO7', [wL(e,:),wR(e,:)] = WENO7recon_Y(w(:,:,e),ny);
