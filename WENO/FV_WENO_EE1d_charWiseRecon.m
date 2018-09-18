@@ -1,4 +1,4 @@
-function res = FV_WENO_charWise_EE1d(q,a,nx,dx,fluxMethod,Recon,test)
+function res = FV_WENO_EE1d_charWiseRecon(q,a,nx,dx,fluxMethod,Recon,test)
 % *************************************************************************
 %
 %          Finite Volume solver for system of equations

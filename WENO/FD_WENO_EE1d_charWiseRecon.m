@@ -1,4 +1,4 @@
-function res = FD_WENO_charWise_EE1d(a,q,nx,dx,fsplitMth,Recon,test)
+function res = FD_WENO_EE1d_charWiseRecon(a,q,nx,dx,fsplitMth,Recon,test)
 % *************************************************************************
 %
 %          Vertor Flux Splitting solver for system of equations

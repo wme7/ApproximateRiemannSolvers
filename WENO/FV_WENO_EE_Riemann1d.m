@@ -59,7 +59,7 @@ lambda0=max(abs(u0)+a0); dt0=CFL*dx/lambda0;
 solver = 2;
 switch solver
     case 1, FV_EE1d = @FV_WENO_EE1d; % The component-wise solver
-    case 2, FV_EE1d = @FV_WENO_charWise_EE1d; % The characteristic-wise solver
+    case 2, FV_EE1d = @FV_WENO_EE1d_charWiseRecon; % The characteristic-wise solver
 end
 
 %% Solver Loop
