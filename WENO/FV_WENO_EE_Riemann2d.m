@@ -80,9 +80,9 @@ end
 % Select Solver
 solver = 3;
 switch solver
-    case 1, FV_EE2d = @FV_WENO_EE2d; % The orignal solver;
-    case 2, FV_EE2d = @FV_WENO_EE2d_Cprototype; % The prototype for C;
-    case 3, FV_EE2d = @FV_WENO_EE2d_Cprototype2; % The prototype for C v2;
+    case 1, FV_EE2d = @FV_WENO_EE2d; % Component-wise reconstruction
+    case 2, FV_EE2d = @FV_WENO_EE2d_PrimitiveRecon; % Primitive-wise reconstruction
+    case 3, FV_EE2d = @FV_WENO_EE2d_CharactRecon;  % Characteristic-wise reconstruction
 end
 
 %% Solver Loop

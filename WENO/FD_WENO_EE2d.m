@@ -1,4 +1,4 @@
-function res = FD_WENO_EE2d_Cprototype(q,a,nx,ny,dx,dy,t,fsplitMth,Recon,Test)
+function res = FD_WENO_EE2d(q,a,nx,ny,dx,dy,t,fsplitMth,Recon,Test)
 % Compute RHS of the semi-discrete form of the Euler equations.
 global preshock postshock mesh_wedge_position
 

@@ -1,6 +1,6 @@
-function res = FV_WENO_EE2d_Cprototype2(q,a,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
+function res = FV_WENO_EE2d_CharactRecon(q,a,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
 % Compute RHS of the semi-discrete form of the Euler equations.
-global gamma preshock postshock mesh_wedge_position
+global preshock postshock mesh_wedge_position
 
 %   Flux at j+1/2
 % 

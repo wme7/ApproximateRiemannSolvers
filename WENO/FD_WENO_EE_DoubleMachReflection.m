@@ -84,8 +84,8 @@ end
 % Select Solver
 solver = 2;
 switch solver
-    case 1, FD_EE2d = @FD_WENO_EE2d; % The orignal solver
-    case 2, FD_EE2d = @FD_WENO_EE2d_Cprototype; % The prototype for C
+    case 1, FD_EE2d = @FD_WENO_EE2d; % Component-wise reconstruction
+    case 2, FD_EE2d = @FD_WENO_EE2d_CharactRecon; % Characteristic-wise reconstruction
 end
 
 %% Solver Loop
