@@ -90,33 +90,41 @@ global preshock postshock mesh_wedge_position
 
 % 3. Reconstruct interface values: qL=q_{i+1/2}^{-} and qR=q_{i-1/2}^{+}
     E=4; % numer of components or layers
-    parfor e=1:E
-        switch Recon
-            case 'WENO5', [flux(e,:)] = WENO5charWiseRecon_X(q(:,:,e),fp(:,:,e),fm(:,:,e),nx);
-            %case 'WENO7', [flux(e,:)] = WENO7charWiseRecon_X(q(:,:,e),fp(:,:,e),fm(:,:,e),nx);
-            otherwise, error('reconstruction not available ;P');
-        end
+    switch Recon
+        case 'WENO5', [flux] = WENO5charWiseRecon_X(q(ic,:,:),fp,fm,nx);
+        %case 'WENO7', [flux] = WENO7charWiseRecon_X(q(ic,:,:),fp,fm,nx);
+        otherwise, error('reconstruction not available ;P');
     end
 
 % 4. Compute finite volume residual term, df/dx.
     res=zeros(size(q)); nc=ny-2*R; nf=nx+1-2*R;
 
     % Flux contribution to the residual of every cell
+%     for e=1:E
+%         for j=1:nc % for all interior cells
+%             res(j+R,R+1,e) = res(j+R,R+1,e) - flux(e,j+nc*(1-1))/dx; % left face of cell j=4.
+%             for i = 2:nf-1 % for all interior faces
+%                 res(j+R,i+R-1,e) = res(j+R,i+R-1,e) + flux(e,j+nc*(i-1))/dx;
+%                 res(j+R, i+R ,e) = res(j+R, i+R ,e) - flux(e,j+nc*(i-1))/dx;
+%             end
+%             res(j+R,nx-R,e) = res(j+R,nx-R,e) + flux(e,j+nc*(nf-1))/dx; % right face of cell j=N-3.
+%         end
+%     end
     for e=1:E
         for j=1:nc % for all interior cells
-            res(j+R,R+1,e) = res(j+R,R+1,e) - flux(e,j+nc*(1-1))/dx; % left face of cell j=4.
+            res(j+R,R+1,e) = res(j+R,R+1,e) - flux(j,1,e)/dx; % left face of cell j=4.
             for i = 2:nf-1 % for all interior faces
-                res(j+R,i+R-1,e) = res(j+R,i+R-1,e) + flux(e,j+nc*(i-1))/dx;
-                res(j+R, i+R ,e) = res(j+R, i+R ,e) - flux(e,j+nc*(i-1))/dx;
+                res(j+R,i+R-1,e) = res(j+R,i+R-1,e) + flux(j,i,e)/dx;
+                res(j+R, i+R ,e) = res(j+R, i+R ,e) - flux(j,i,e)/dx;
             end
-            res(j+R,nx-R,e) = res(j+R,nx-R,e) + flux(e,j+nc*(nf-1))/dx; % right face of cell j=N-3.
+            res(j+R,nx-R,e) = res(j+R,nx-R,e) + flux(j,nc,e)/dx; % right face of cell j=N-3.
         end
     end
-
-    % Clear flux variables
-    clear flux fp fm;
     
 % 5. Produce flux splitting in y-direction
+
+	% Clear flux variables
+    clear flux fp fm;
 
     % we only consider internal cells
     ic=R+1:nx-R;
@@ -127,27 +135,37 @@ global preshock postshock mesh_wedge_position
     end
 
 % 6. Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
-    for e=1:E
-        switch Recon
-            case 'WENO5', [flux(e,:)] = WENO5charWiseRecon_Y(q(:,:,e),fp(:,:,e),fm(:,:,e),ny);
-            %case 'WENO7', [flux(e,:)] = WENO7charWiseRecon_Y(q(:,:,e),fp(:,:,e),fm(:,:,e),ny);
-        end
+    switch Recon
+        case 'WENO5', [flux] = WENO5charWiseRecon_Y(q(:,ic,:),fp,fm,ny);
+        %case 'WENO7', [flux] = WENO7charWiseRecon_Y(q(:,ic,:),fp,fm,ny);
     end
 
-% 7. Flux contribution to the residual of every cell
+% 7. Compute finite volume residual term, dg/dy.
     nc=nx-2*R; nf=ny+1-2*R;
+    
+    % Flux contribution to the residual of every cell
+%     for e=1:E
+%         for i=1:nc % for all interior cells
+%             res(R+1,i+R,e) = res(R+1,i+R,e) - flux(e,1+nf*(i-1))/dy;
+%             for j=2:nf-1 % for all interior cells
+%                 res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(e,j+nf*(i-1))/dy;
+%                 res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(e,j+nf*(i-1))/dy;
+%             end
+%             res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(e,nf+nf*(i-1))/dy;
+%         end
+%     end
     for e=1:E
         for i=1:nc % for all interior cells
-            res(R+1,i+R,e) = res(R+1,i+R,e) - flux(e,1+nf*(i-1))/dy;
+            res(R+1,i+R,e) = res(R+1,i+R,e) - flux(1,i,e)/dy;
             for j=2:nf-1 % for all interior cells
-                res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(e,j+nf*(i-1))/dy;
-                res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(e,j+nf*(i-1))/dy;
+                res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(j,i,e)/dy;
+                res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(j,i,e)/dy;
             end
-            res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(e,nf+nf*(i-1))/dy;
+            res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(nf,i,e)/dy;
         end
     end
 
-end % FVM WENO
+end % FDM WENO
 
 %%%%%%%%%%%%%%%%%%%
 % Distance to shock (for Double Mach Reflection)
@@ -227,15 +245,11 @@ function [flux] = WENO5charWiseRecon_X(q,fp,fm,N)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 global gamma
 
-% R: substencil size, nf: total number of internal faces;
-R=3; I=R:N-R; % nf=N+1-2*R; % All internal faces
+% R: substencil size, EE: components, nf: total number of internal faces;
+R=3; EE=4; I=R:N-R; % nf=N+1-2*R; % All internal faces
 
 % Reconstruction parameters
 epweno=1E-40; gamma1=gamma-1;
-
-% Eigenvalues parameters
-evr=zeros(4,4,N-1);
-evl=zeros(4,4,N-1);
 
 % Compute flux differences for the entire domain
 dfp = fp(:,2:N,:)-fp(:,1:N-1,:); % df{+}_{j+1/2}
@@ -245,109 +259,116 @@ dfm = fm(:,2:N,:)-fm(:,1:N-1,:); % df{-}_{j+1/2}
 f=fp+fm; flux=(-f(:,I-1,:)+7*(f(:,I,:)+f(:,I+1,:))-f(:,I+2,:))/12; % f_{j+1/2}
 
 % Compute eigenvectors at the cell interfaces j+1/2
-for i = 2:N
-    % Using simple mean
-    r = (q(1,i-1)+q(1,i))/2;
-    u = (q(2,i-1)+q(2,i))/(2*r);
-    v = (q(3,i-1)+q(3,i))/(2*r);
-    E = (q(4,i-1)+q(4,i))/2;
-    U = 0.5*(u^2+v^2);
-    p = gamma1*(E - 0.5*r*U^2);
-    H = (E+p)/r;
-    c2 = gamma1*(H - 0.5*U^2);
-    c = sqrt(gamma*p/r);
-    
-    % Compute properties at cell interfaces using Roe avegares
-    
-    % Construct matrix of right eigenvectors
-    %      _                     _ 
-    %     |                       |
-    %     |   1     1    0    1   |
-    %     |                       |
-    % R = |  u-c    u    0   u+c  |
-    %     |                       |
-    %     |   v     v    1    v   |
-    %     |                       |
-    %     |  H-uc   q    v   H+uc |
-    %     |_                     _|
-    %
-    % where q = 0.5*(u^2+v^2) 
-    
-    evr(:,:,i-1) = [...
-          1  , 1 , 0 ,  1  ;...
-         u-c , u , 0 , u+c ;...
-          v  , v , 1 ,  v  ;...
-        H-u*c, U , v ,H+u*c];
+for j = 1:size(q,1)
+    for i = I % all internal faces of the domain
 
-    % Construct matrix of left eigenvectors
-    %         _                                        _ 
-    %        |                                          |
-    %        | (g-1)*q+c*u  -(g-1)*u-c  -(g-1)*v  (g-1) |
-    %        |  ----------   ---------   -------  ----- |
-    %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
-    %        |                                          |
-    % R^{-1}=| c^2-(g-1)*q    (g-1)*u    (g-1)*v -(g-1) |
-    %        |  ----------    -------    -------  ----- |
-    %        |      c^2         c^2        c^2     c^2  |
-    %        |                                          |
-    %        |      -v          0          1       0    |
-    %        |                                          |
-    %        | (g-1)*q-c*u  -(g-1)*u+c  -(g-1)*v  (g-1) |
-    %        |  ----------   ---------   -------  ----- |
-    %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
-    %        |_                                        _|
-    %
-    % where q = 0.5*(u^2+v^2) 
+        % 1. Using simple mean to compute cell interface properties
+        r = (q(j,i,1)+q(j,i+1,1))/2;
+        u = (q(j,i,2)+q(j,i+1,2))/(2*r);
+        v = (q(j,i,3)+q(j,i+1,3))/(2*r);
+        E = (q(j,i,4)+q(j,i+1,4))/2;
+        U = 0.5*(u^2+v^2);
+        p = gamma1*(E-r*U);
+        H = (E+p)/r;
+        c2 = gamma1*(H-U);
+        c = sqrt(gamma*p/r);
 
-    evl(:,:,i-1) = [...
-         (U*gamma1+c*u)/(2*c2),-(c+u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2);...
-           (c2-U*gamma1)/c2   ,   (u*gamma1)/c2    , (v*gamma1)/c2    ,-(gamma1)/c2  ;...
-                -v            ,         0          ,         1        ,        0     ;...
-         (U*gamma1-c*u)/(2*c2), (c-u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2)];
-end
+        % 2. Compute eigenvectors at the cell interface
 
-% Compute the nonlinear part of the reconstruction
-for i = I  % all internal faces of the domain
-    
-    % Project the splitted flux jumps to the right eigenvector space
-    dfps=evl(:,:,i)*dfp(:,-2+i:i+1);
-    dfms=evl(:,:,i)*dfm(:,-1+i:i+2);
+        % Construct matrix of right eigenvectors
+        %      _                     _ 
+        %     |                       |
+        %     |   1     1    0    1   |
+        %     |                       |
+        % R = |  u-c    u    0   u+c  |
+        %     |                       |
+        %     |   v     v    1    v   |
+        %     |                       |
+        %     |  H-uc   q    v   H+uc |
+        %     |_                     _|
+        %
+        % where q = 0.5*(u^2+v^2) 
 
-    % Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
-    AmB=(dfps(:,1)-dfps(:,2));
-    BmC=(dfps(:,2)-dfps(:,3));
-    CmD=(dfps(:,3)-dfps(:,4));
+        evr = [...
+              1  , 1 , 0 ,  1  ;...
+             u-c , u , 0 , u+c ;...
+              v  , v , 1 ,  v  ;...
+            H-u*c, U , v ,H+u*c];
 
-    IS1=13*AmB.^2+3*(  dfps(:,1)-3*dfps(:,2)).^2;
-    IS2=13*BmC.^2+3*(  dfps(:,2)+  dfps(:,3)).^2;
-    IS3=13*CmD.^2+3*(3*dfps(:,3)-  dfps(:,4)).^2;
+        % Construct matrix of left eigenvectors
+        %         _                                        _ 
+        %        |                                          |
+        %        | (g-1)*q+c*u  -(g-1)*u-c  -(g-1)*v  (g-1) |
+        %        |  ----------   ---------   -------  ----- |
+        %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
+        %        |                                          |
+        % R^{-1}=| c^2-(g-1)*q    (g-1)*u    (g-1)*v -(g-1) |
+        %        |  ----------    -------    -------  ----- |
+        %        |      c^2         c^2        c^2     c^2  |
+        %        |                                          |
+        %        |      -v          0          1       0    |
+        %        |                                          |
+        %        | (g-1)*q-c*u  -(g-1)*u+c  -(g-1)*v  (g-1) |
+        %        |  ----------   ---------   -------  ----- |
+        %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
+        %        |_                                        _|
+        %
+        % where q = 0.5*(u^2+v^2) 
 
-    IS1=(epweno+IS1).^2;
-    IS2=(epweno+IS2).^2;
-    IS3=(epweno+IS3).^2;
-    s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
-    ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
-    % flux contribution from $f_{i+1/2}^{+}$ reconstruction
-    flux(:,i+1-R) = flux(:,i+1-R) - evr(:,:,i+1-R)*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        evl = [...
+             (U*gamma1+c*u)/(2*c2),-(c+u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2);...
+               (c2-U*gamma1)/c2   ,   (u*gamma1)/c2    , (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+                    -v            ,         0          ,         1        ,        0     ;...
+             (U*gamma1-c*u)/(2*c2), (c-u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2)];
 
-    % Extrapolation $u_{i+1/2}^{+}$ == $f_{i+1/2}^{-}$
-    AmB=(dfms(:,4)-dfms(:,3));
-    BmC=(dfms(:,3)-dfms(:,2));
-    CmD=(dfms(:,2)-dfms(:,1));
+        % 3. Compute the nonlinear part of the reconstruction
 
-    IS1=13*AmB.^2+3*(  dfms(:,4)-3*dfms(:,3)).^2;
-    IS2=13*BmC.^2+3*(  dfms(:,3)+  dfms(:,2)).^2;
-    IS3=13*CmD.^2+3*(3*dfms(:,2)-  dfms(:,1)).^2;
+        % Project the splitted flux jumps to the right eigenvector space
+        dfps=evl*squeeze(dfp(j,-2+i:i+1,:));
+        dfms=evl*squeeze(dfm(j,-1+i:i+2,:));
 
-    IS1=(epweno+IS1).^2;
-    IS2=(epweno+IS2).^2;
-    IS3=(epweno+IS3).^2;
-    s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
-    ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
-    % flux contribution from $f_{i+1/2}^{-}$ reconstruction
-    flux(:,i+1-R) = flux(:,i+1-R) + evr(:,:,i+1-R)*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        % Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
+        AmB=(dfps(:,1)-dfps(:,2));
+        BmC=(dfps(:,2)-dfps(:,3));
+        CmD=(dfps(:,3)-dfps(:,4));
 
-end % loop over each interface
+        IS1=13*AmB.^2+3*(  dfps(:,1)-3*dfps(:,2)).^2;
+        IS2=13*BmC.^2+3*(  dfps(:,2)+  dfps(:,3)).^2;
+        IS3=13*CmD.^2+3*(3*dfps(:,3)-  dfps(:,4)).^2;
+
+        IS1=(epweno+IS1).^2;
+        IS2=(epweno+IS2).^2;
+        IS3=(epweno+IS3).^2;
+        s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
+        ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
+        % flux contribution from $f_{i+1/2}^{+}$ reconstruction
+        h=evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        for e=1:EE
+            flux(j,i+1-R,e) = flux(j,i+1-R,e) - h(e);
+        end
+
+        % Extrapolation $u_{i+1/2}^{+}$ == $f_{i+1/2}^{-}$
+        AmB=(dfms(:,4)-dfms(:,3));
+        BmC=(dfms(:,3)-dfms(:,2));
+        CmD=(dfms(:,2)-dfms(:,1));
+
+        IS1=13*AmB.^2+3*(  dfms(:,4)-3*dfms(:,3)).^2;
+        IS2=13*BmC.^2+3*(  dfms(:,3)+  dfms(:,2)).^2;
+        IS3=13*CmD.^2+3*(3*dfms(:,2)-  dfms(:,1)).^2;
+
+        IS1=(epweno+IS1).^2;
+        IS2=(epweno+IS2).^2;
+        IS3=(epweno+IS3).^2;
+        s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
+        ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
+        % flux contribution from $f_{i+1/2}^{-}$ reconstruction
+        h = evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        for e=1:EE
+            flux(j,i+1-R,e) = flux(j,i+1-R,e) + h(e);
+        end
+
+    end % loop over each interface
+end 
 end
 
 function [flux] = WENO5charWiseRecon_Y(q,gp,gm,N)
@@ -364,125 +385,127 @@ function [flux] = WENO5charWiseRecon_Y(q,gp,gm,N)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 global gamma
 
-% R: substencil size, nf: total number of internal faces;
-R=3; I=R:N-R; % nf=N+1-2*R; % All internal faces
+% R: substencil size, EE: components, nf: total number of internal faces;
+R=3; EE=4; I=R:N-R; % nf=N+1-2*R; % All internal faces
 
 % Reconstruction parameters
 epweno=1E-40; gamma1=gamma-1;
 
-% Eigenvalues parameters
-evr=zeros(4,4,N-1);
-evl=zeros(4,4,N-1);
-
 % Compute flux differences for the entire domain
-dfp = gp(2:N,:,:)-gp(1:N-1,:,:); % df{+}_{j+1/2}
-dfm = gm(2:N,:,:)-gm(1:N-1,:,:); % df{-}_{j+1/2}
+dgp = gp(2:N,:,:)-gp(1:N-1,:,:); % df{+}_{j+1/2}
+dgm = gm(2:N,:,:)-gm(1:N-1,:,:); % df{-}_{j+1/2}
     
 % Compute the part of the reconstruction that is stencil-independent
 g=gp+gm; flux=(-g(I-1,:,:)+7*(g(I,:,:)+g(I+1,:,:))-g(I+2,:,:))/12; % f_{j+1/2}
 
 % Compute eigenvectors at the cell interfaces j+1/2
-for i = 2:N
-    % Using simple mean
-    r = (q(1,i-1)+q(1,i))/2;
-    u = (q(2,i-1)+q(2,i))/(2*r);
-    v = (q(3,i-1)+q(3,i))/(2*r);
-    E = (q(4,i-1)+q(4,i))/2;
-    U = 0.5*(u^2+v^2);
-    p = gamma1*(E - 0.5*r*U^2);
-    H = (E+p)/r;
-    c2 = gamma1*(H - 0.5*U^2);
-    c = sqrt(gamma*p/r);
-    
-    % Compute properties at cell interfaces using Roe avegares
-    
-    % Construct matrix of right eigenvectors
-    %      _                    _ 
-    %     |                      |
-    %     |   1    0   1    1    |
-    %     |                      |
-    %     |   u    1   u    u    |
-    %     |                      |
-    % R = |  v-c   0   v   v+c   |
-    %     |                      |
-    %     |  H-vc  u   q   H+vc  |
-    %     |_                    _|
-    %
-    % where q = 0.5*(u^2+v^2) 
-    
-    evr(:,:,i-1) = [...
-          1  , 0 , 1 ,  1   ;...
-          u  , 1 , u ,  u   ;...
-         v-c , 0 , v , v+c  ;...
-        H-v*c, u , U ,H+v*c];
+for j =1:size(q,2)
+    for i = I % all internal faces of the domain
 
-    % Construct matrix of left eigenvectors
-    %         _                                        _ 
-    %        |                                          |
-    %        | (g-1)*q+c*v  -(g-1)*u  -(g-1)*v-c  (g-1) |
-    %        |  ----------   -------   ---------  ----- |
-    %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
-    %        |                                          |
-    % R^{-1}=|      -u          1          0       0    |
-    %        |                                          |
-    %        | c^2-(g-1)*q   (g-1)*u    (g-1)*v  -(g-1) |
-    %        |  ----------   -------    -------   ----- |
-    %        |      c^2        c^2        c^2      c^2  |
-    %        |                                          |
-    %        | (g-1)*q-c*v  -(g-1)*u  -(g-1)*v+c  (g-1) |
-    %        |  ----------   -------   ---------  ----- |
-    %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
-    %        |_                                        _|
-    %
-    % where q = 0.5*(u^2+v^2) 
+        % 1. Using simple mean to compute cell interface properties
+        r = (q(i,j,1)+q(i+1,j,1))/2;
+        u = (q(i,j,2)+q(i+1,j,2))/(2*r);
+        v = (q(i,j,3)+q(i+1,j,3))/(2*r);
+        E = (q(i,j,4)+q(i+1,j,4))/2;
+        U = 0.5*(u^2+v^2);
+        p = gamma1*(E-r*U);
+        H = (E+p)/r;
+        c2 = gamma1*(H-U);
+        c = sqrt(gamma*p/r);
 
-    evl(:,:,i-1) = [...
-         (U*gamma1+c*v)/(2*c2),-(u*gamma1)/(2*c2),-(c+v*gamma1)/(2*c2), gamma1/(2*c2);...
-                -u            ,         1        ,         0          ,        0     ;...
-           (c2-U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
-         (U*gamma1-c*v)/(2*c2), (u*gamma1)/(2*c2), (c+v*gamma1)/(2*c2), gamma1/(2*c2)];
+        % 2. Compute eigenvectors at the cell interface
+
+        % Construct matrix of right eigenvectors
+        %      _                    _ 
+        %     |                      |
+        %     |   1    0   1    1    |
+        %     |                      |
+        %     |   u    1   u    u    |
+        %     |                      |
+        % R = |  v-c   0   v   v+c   |
+        %     |                      |
+        %     |  H-vc  u   q   H+vc  |
+        %     |_                    _|
+        %
+        % where q = 0.5*(u^2+v^2) 
+
+        evr = [...
+              1  , 0 , 1 ,  1   ;...
+              u  , 1 , u ,  u   ;...
+             v-c , 0 , v , v+c  ;...
+            H-v*c, u , U ,H+v*c];
+
+        % Construct matrix of left eigenvectors
+        %         _                                        _ 
+        %        |                                          |
+        %        | (g-1)*q+c*v  -(g-1)*u  -(g-1)*v-c  (g-1) |
+        %        |  ----------   -------   ---------  ----- |
+        %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
+        %        |                                          |
+        % R^{-1}=|      -u          1          0       0    |
+        %        |                                          |
+        %        | c^2-(g-1)*q   (g-1)*u    (g-1)*v  -(g-1) |
+        %        |  ----------   -------    -------   ----- |
+        %        |      c^2        c^2        c^2      c^2  |
+        %        |                                          |
+        %        | (g-1)*q-c*v  -(g-1)*u  -(g-1)*v+c  (g-1) |
+        %        |  ----------   -------   ---------  ----- |
+        %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
+        %        |_                                        _|
+        %
+        % where q = 0.5*(u^2+v^2) 
+
+        evl = [...
+             (U*gamma1+c*v)/(2*c2),-(u*gamma1)/(2*c2),-(c+v*gamma1)/(2*c2), gamma1/(2*c2);...
+                    -u            ,         1        ,         0          ,        0     ;...
+               (c2-U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+             (U*gamma1-c*v)/(2*c2),-(u*gamma1)/(2*c2), (c-v*gamma1)/(2*c2), gamma1/(2*c2)];
+
+        % 3. Compute the nonlinear part of the reconstruction
+
+        % Project the splitted flux jumps to the right eigenvector space
+        dgps=evl*squeeze(dgp(-2+i:i+1,j,:));
+        dgms=evl*squeeze(dgm(-1+i:i+2,j,:));
+
+        % Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
+        AmB=(dgps(:,1)-dgps(:,2));
+        BmC=(dgps(:,2)-dgps(:,3));
+        CmD=(dgps(:,3)-dgps(:,4));
+
+        IS1=13*AmB.^2+3*(  dgps(:,1)-3*dgps(:,2)).^2;
+        IS2=13*BmC.^2+3*(  dgps(:,2)+  dgps(:,3)).^2;
+        IS3=13*CmD.^2+3*(3*dgps(:,3)-  dgps(:,4)).^2;
+
+        IS1=(epweno+IS1).^2;
+        IS2=(epweno+IS2).^2;
+        IS3=(epweno+IS3).^2;
+        s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
+        ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
+        % flux contribution from $f_{i+1/2}^{+}$ reconstruction
+        h=evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        for e=1:EE
+            flux(i+1-R,j,e) = flux(i+1-R,j,e) - h(e);
+        end
+
+        % Extrapolation $u_{i+1/2}^{+}$ == $f_{i+1/2}^{-}$
+        AmB=(dgms(:,4)-dgms(:,3));
+        BmC=(dgms(:,3)-dgms(:,2));
+        CmD=(dgms(:,2)-dgms(:,1));
+
+        IS1=13*AmB.^2+3*(  dgms(:,4)-3*dgms(:,3)).^2;
+        IS2=13*BmC.^2+3*(  dgms(:,3)+  dgms(:,2)).^2;
+        IS3=13*CmD.^2+3*(3*dgms(:,2)-  dgms(:,1)).^2;
+
+        IS1=(epweno+IS1).^2;
+        IS2=(epweno+IS2).^2;
+        IS3=(epweno+IS3).^2;
+        s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
+        ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
+        % flux contribution from $f_{i+1/2}^{-}$ reconstruction
+        h=evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        for e=1:EE
+            flux(i+1-R,j,e) = flux(i+1-R,j,e) + h(e);
+        end
+    end % loop over each interface
 end
-
-% Compute the nonlinear part of the reconstruction
-for i = I  % all internal faces of the domain
-    
-    % Project the splitted flux jumps to the right eigenvector space
-    dfps=evl(:,:,i)*dfp(:,-2+i:i+1);
-    dfms=evl(:,:,i)*dfm(:,-1+i:i+2);
-
-    % Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
-    AmB=(dfps(:,1)-dfps(:,2));
-    BmC=(dfps(:,2)-dfps(:,3));
-    CmD=(dfps(:,3)-dfps(:,4));
-
-    IS1=13*AmB.^2+3*(  dfps(:,1)-3*dfps(:,2)).^2;
-    IS2=13*BmC.^2+3*(  dfps(:,2)+  dfps(:,3)).^2;
-    IS3=13*CmD.^2+3*(3*dfps(:,3)-  dfps(:,4)).^2;
-
-    IS1=(epweno+IS1).^2;
-    IS2=(epweno+IS2).^2;
-    IS3=(epweno+IS3).^2;
-    s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
-    ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
-    % flux contribution from $f_{i+1/2}^{+}$ reconstruction
-    flux(:,i+1-R) = flux(:,i+1-R) - evr(:,:,i+1-R)*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
-
-    % Extrapolation $u_{i+1/2}^{+}$ == $f_{i+1/2}^{-}$
-    AmB=(dfms(:,4)-dfms(:,3));
-    BmC=(dfms(:,3)-dfms(:,2));
-    CmD=(dfms(:,2)-dfms(:,1));
-
-    IS1=13*AmB.^2+3*(  dfms(:,4)-3*dfms(:,3)).^2;
-    IS2=13*BmC.^2+3*(  dfms(:,3)+  dfms(:,2)).^2;
-    IS3=13*CmD.^2+3*(3*dfms(:,2)-  dfms(:,1)).^2;
-
-    IS1=(epweno+IS1).^2;
-    IS2=(epweno+IS2).^2;
-    IS3=(epweno+IS3).^2;
-    s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
-    ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
-    % flux contribution from $f_{i+1/2}^{-}$ reconstruction
-    flux(:,i+1-R) = flux(:,i+1-R) + evr(:,:,i+1-R)*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
-
-end % loop over each interface
 end

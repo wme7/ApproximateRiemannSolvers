@@ -18,148 +18,149 @@ global preshock postshock mesh_wedge_position
 %   F = cat(3, ru, ru^2+p, ruv, u(E+p));
 %   G = cat(3, rv, ruv, rv^2+p, v(E+p));
 
-% Identify number of gost cells
-switch Recon
-    case {'WENO5','Poly5'}, R=3; % R: stencil size and number of gost cells
-    case {'WENO7','Poly7'}, R=4;
-    otherwise, error('reconstruction not available ;P');
-end
+% 1. Set boundary conditions 
 
-switch Test
-    case 'Smooth' % Set Periodic BCs
-        for i=1:R
-            q(:,i,:)=q(:,nx-R+i,:); q(:,nx-2*R+i,:)=q(:,R+i,:);	% Periodic BCs
-        end
-        for j=1:R
-            q(j,:,:)=q(ny-R+i,:,:); q(ny-2*R+j,:,:)=q(R+j,:,:);	% Periodic BCs
-        end
-    case 'Riemann' % Set outflow BCs
-        for i=1:R
-            q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
-        end
-        for j=1:R
-            q(j,:,:)=q(R+1,:,:); q(ny+1-j,:,:)=q(ny-R,:,:);	% Neumann BCs
-        end
-    case 'DMR' % Set DMR test BCs
-        % Static BCs
-        for i=1:R
-            q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
-        end
-        % Static BCs at the bottom of domain
-        for j=1:R
-            for i=R+1:nx-R
-                if i<(R+mesh_wedge_position)
-                    q(j,i,:)=q(R+1,i,:); % outflow condition : Neumann BC
-                else
-                    q(j,i,:)=q(R+1,i,:); q(j,i,3)=-q(R+1,i,3); % EE reflective BC
-                end
-            end
-        end
-        % Time dependent BCs at the top of domain: moving shock
-        for j=ny+1-R:ny % only gosht cells at the top
-            for i=R+1:nx-R % evaluate all x domain
-                if distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < -3*dx % mesh_shock
-                    q(j,i,:)=q(ny-R,i,:); % Neumann BC
-                elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) > 3*dx % mesh_shock
-                    q(j,i,:)=q(ny-R,i,:); % Neumann BC
-                elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < 0 % mesh_shock
-                    q(j,i,:)=postshock; % Dirichlet BCs
-                else
-                    q(j,i,:)=preshock; % Dirichlet BCs
-                end
-            end
-        end
-    otherwise, error('Test boundaries not set!');
-end
-
-% internal cells and primitives array
-ic=R+1:ny-R;  %w=zeros(numel(ic),nx,4);
-
-% Trim Domain
-%w = q(ic,:,:);
-
-% 1. Reconstruct interface values: qL=q_{i+1/2}^{-} and qR=q_{i-1/2}^{+}
-E=4; % numer of components or layers
-parfor e=1:E
+    % Identify number of gost cells
     switch Recon
-        case 'WENO5', [qL(e,:),qR(e,:)] = WENO5charWiseRecon_X(q(ic,:,e),nx);
-        %case 'WENO7', [qL(e,:),qR(e,:)] = WENO7charWiseRecon_X(q(ic,:,e),nx);
+        case {'WENO5','Poly5'}, R=3; % R: stencil size and number of gost cells
+        case {'WENO7','Poly7'}, R=4;
         otherwise, error('reconstruction not available ;P');
     end
-end
 
-% 2. Compute finite volume residual term, df/dx.
-res=zeros(size(q)); flux=zeros(size(qR)); nc=ny-2*R; nf=nx+1-2*R; N=nc*nf;
-
-% Normal unitary face vectors: (nx,ny)
-% normals = {[1,0], [0,1]}; % i.e.: x-axis, y-axis
-
-% compute flux at (i+1/2,j)
-for c=1:N
-    switch fluxMethod
-        case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[1,0],a); % Lax Friedrichs
-        case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[1,0]);  % Roe
-        case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[1,0]);  % Rusanov
-        case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[1,0]); % HLLE
-        case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[1,0]); % HLLC
-        otherwise, error('flux method not available ;P');
+    % Set boundary conditions on ghost cells
+    switch Test
+        case 'Smooth' % Set Periodic BCs
+            for i=1:R
+                q(:,i,:)=q(:,nx-R+i,:); q(:,nx-2*R+i,:)=q(:,R+i,:);	% Periodic BCs
+            end
+            for j=1:R
+                q(j,:,:)=q(ny-R+i,:,:); q(ny-2*R+j,:,:)=q(R+j,:,:);	% Periodic BCs
+            end
+        case 'Riemann' % Set outflow BCs
+            for i=1:R
+                q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
+            end
+            for j=1:R
+                q(j,:,:)=q(R+1,:,:); q(ny+1-j,:,:)=q(ny-R,:,:);	% Neumann BCs
+            end
+        case 'DMR' % Set DMR test BCs
+            % Static BCs
+            for i=1:R
+                q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
+            end
+            % Static BCs at the bottom of domain
+            for j=1:R
+                for i=R+1:nx-R
+                    if i<(R+mesh_wedge_position)
+                        q(j,i,:)=q(R+1,i,:); % outflow condition : Neumann BC
+                    else
+                        q(j,i,:)=q(R+1,i,:); q(j,i,3)=-q(R+1,i,3); % EE reflective BC
+                    end
+                end
+            end
+            % Time dependent BCs at the top of domain: moving shock
+            for j=ny+1-R:ny % only gosht cells at the top
+                for i=R+1:nx-R % evaluate all x domain
+                    if distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < -3*dx % mesh_shock
+                        q(j,i,:)=q(ny-R,i,:); % Neumann BC
+                    elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) > 3*dx % mesh_shock
+                        q(j,i,:)=q(ny-R,i,:); % Neumann BC
+                    elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < 0 % mesh_shock
+                        q(j,i,:)=postshock; % Dirichlet BCs
+                    else
+                        q(j,i,:)=preshock; % Dirichlet BCs
+                    end
+                end
+            end
+        otherwise, error('Test boundaries not set!');
     end
-end
 
-% Flux contribution to the residual of every cell
-for e=1:E
-    for j=1:nc % for all interior cells
-        res(j+R,R+1,e) = res(j+R,R+1,e) - flux(e,j+nc*(1-1))/dx; % left face of cell j=4.
-        for i = 2:nf-1 % for all interior faces
-            res(j+R,i+R-1,e) = res(j+R,i+R-1,e) + flux(e,j+nc*(i-1))/dx;
-            res(j+R, i+R ,e) = res(j+R, i+R ,e) - flux(e,j+nc*(i-1))/dx;
+% 2. Produce reconstruction at cell faces in x-direction
+    
+    % internal cells
+    ic=R+1:ny-R;  
+
+    % 1. Reconstruct interface values: qL=q_{i+1/2}^{-} and qR=q_{i-1/2}^{+}
+    E=4; % numer of components or layers
+    for e=1:E
+        switch Recon
+            case 'WENO5', [qL,qR] = WENO5charWiseRecon_X(q(ic,:,:),nx);
+            %case 'WENO7', [qL,qR] = WENO7charWiseRecon_X(q(ic,:,:),nx);
+            otherwise, error('reconstruction not available ;P');
         end
-        res(j+R,nx-R,e) = res(j+R,nx-R,e) + flux(e,j+nc*(nf-1))/dx; % right face of cell j=N-3.
     end
-end
 
-% Compute primitive variables at solution points (they still in memory)
-clear qL qR wL wR flux;
+% 3. Compute finite volume residual term, df/dx.
+    res=zeros(size(q)); flux=zeros(size(qR)); nc=ny-2*R; nf=nx+1-2*R; N=nc*nf;
 
-% internal cells and primitives array
-ic=R+1:nx-R;  %w=zeros(ny,numel(ic),4);
+    % Normal unitary face vectors: (nx,ny)
+    % normals = {[1,0], [0,1]}; % i.e.: x-axis, y-axis
 
-% Compute primitive variables at solution points
-% w = q(:,ic,:);
-
-% 1. Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
-parfor e=1:E
-    switch Recon
-        case 'WENO5', [qL(e,:),qR(e,:)] = WENO5charWiseRecon_Y(q(ic,:,e),ny);
-        %case 'WENO7', [qL(e,:),qR(e,:)] = WENO7charWiseRecon_Y(q(ic,:,e),ny);
-    end
-end
-
-% 2. Compute finite volume residual term, df/dx.
-flux=zeros(size(qL)); nc=nx-2*R; nf=ny+1-2*R; N=nc*nf;
-
-% compute flux at (i,j+1/2)
-for c=1:N
-    switch fluxMethod
-        case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[0,1],a); % Lax Friedrichs
-        case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[0,1]);  % Roe
-        case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[0,1]);  % Rusanov
-        case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[0,1]); % HLLE
-        case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[0,1]); % HLLC
-    end
-end
-
-% Flux contribution to the residual of every cell
-for e=1:E
-    for i=1:nc % for all interior cells
-        res(R+1,i+R,e) = res(R+1,i+R,e) - flux(e,1+nf*(i-1))/dy;
-        for j=2:nf-1 % for all interior cells
-            res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(e,j+nf*(i-1))/dy;
-            res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(e,j+nf*(i-1))/dy;
+    % compute flux at (i+1/2,j)
+    for c=1:N
+        switch fluxMethod
+            case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[1,0],a); % Lax Friedrichs
+            case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[1,0]);  % Roe
+            case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[1,0]);  % Rusanov
+            case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[1,0]); % HLLE
+            case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[1,0]); % HLLC
+            otherwise, error('flux method not available ;P');
         end
-        res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(e,nf+nf*(i-1))/dy;
     end
-end
+
+% 4. Flux contribution to the residual of every cell
+    for e=1:E
+        for j=1:nc % for all interior cells
+            res(j+R,R+1,e) = res(j+R,R+1,e) - flux(e,j+nc*(1-1))/dx; % left face of cell j=4.
+            for i = 2:nf-1 % for all interior faces
+                res(j+R,i+R-1,e) = res(j+R,i+R-1,e) + flux(e,j+nc*(i-1))/dx;
+                res(j+R, i+R ,e) = res(j+R, i+R ,e) - flux(e,j+nc*(i-1))/dx;
+            end
+            res(j+R,nx-R,e) = res(j+R,nx-R,e) + flux(e,j+nc*(nf-1))/dx; % right face of cell j=N-3.
+        end
+    end
+
+% 5. Produce reconstruction at cell faces in y-direction
+    
+    % Compute primitive variables at solution points (they still in memory)
+    clear qL qR wL wR flux;
+
+    % internal cells 
+    ic=R+1:nx-R;
+
+    % Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
+    for e=1:E
+        switch Recon
+            case 'WENO5', [qL,qR] = WENO5charWiseRecon_Y(q(ic,:,:),ny);
+            %case 'WENO7', [qL,qR] = WENO7charWiseRecon_Y(q(ic,:,:),ny);
+        end
+    end
+
+% 6. Compute finite volume residual term, dg/dy.
+    flux=zeros(size(qL)); nc=nx-2*R; nf=ny+1-2*R; N=nc*nf;
+
+    % compute flux at (i,j+1/2)
+    for c=1:N
+        switch fluxMethod
+            case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[0,1],a); % Lax Friedrichs
+            case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[0,1]);  % Roe
+            case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[0,1]);  % Rusanov
+            case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[0,1]); % HLLE
+            case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[0,1]); % HLLC
+        end
+    end
+
+% 7. Flux contribution to the residual of every cell
+    for e=1:E
+        for i=1:nc % for all interior cells
+            res(R+1,i+R,e) = res(R+1,i+R,e) - flux(e,1+nf*(i-1))/dy;
+            for j=2:nf-1 % for all interior cells
+                res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(e,j+nf*(i-1))/dy;
+                res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(e,j+nf*(i-1))/dy;
+            end
+            res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(e,nf+nf*(i-1))/dy;
+        end
+    end
 
 end % FVM WENO
 
@@ -475,65 +476,67 @@ dq = q(:,2:N,:)-q(:,1:N-1,:); % dq_{j+1/2}
 qL = (-q(:,I-1,:)+7*(q(:,I,:)+q(:,I+1,:))-q(:,I+2,:))/12; qR = qL; % dq_{j+1/2}
 
 % Compute eigenvectors at the cell interfaces j+1/2
-for i = 2:N
-    % Using simple mean
-    r = (q(1,i-1)+q(1,i))/2;
-    u = (q(2,i-1)+q(2,i))/(2*r);
-    v = (q(3,i-1)+q(3,i))/(2*r);
-    E = (q(4,i-1)+q(4,i))/2;
-    U = 0.5*(u^2+v^2);
-    p = gamma1*(E - 0.5*r*U^2);
-    H = (E+p)/r;
-    c2 = gamma1*(H - 0.5*U^2);
-    c = sqrt(gamma*p/r);
-    
-    % Compute properties at cell interfaces using Roe avegares
-    
-    % Construct matrix of right eigenvectors
-    %      _                     _ 
-    %     |                       |
-    %     |   1     1    0    1   |
-    %     |                       |
-    % R = |  u-c    u    0   u+c  |
-    %     |                       |
-    %     |   v     v    1    v   |
-    %     |                       |
-    %     |  H-uc   q    v   H+uc |
-    %     |_                     _|
-    %
-    % where q = 0.5*(u^2+v^2) 
-    
-    evr(:,:,i-1) = [...
-          1  , 1 , 0 ,  1  ;...
-         u-c , u , 0 , u+c ;...
-          v  , v , 1 ,  v  ;...
-        H-u*c, U , v ,H+u*c];
+for j = 1:size(q,1)
+    for i = I
+        % Using simple mean
+        r = (q(j,i,1)+q(j,i+1,1))/2;
+        u = (q(j,i,2)+q(j,i+1,2))/(2*r);
+        v = (q(j,i,3)+q(j,i+1,3))/(2*r);
+        E = (q(j,i,4)+q(j,i+1,4))/2;
+        U = 0.5*(u^2+v^2);
+        p = gamma1*(E-r*U);
+        H = (E+p)/r;
+        c2 = gamma1*(H-U);
+        c = sqrt(gamma*p/r);
 
-    % Construct matrix of left eigenvectors
-    %         _                                        _ 
-    %        |                                          |
-    %        | (g-1)*q+c*u  -(g-1)*u-c  -(g-1)*v  (g-1) |
-    %        |  ----------   ---------   -------  ----- |
-    %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
-    %        |                                          |
-    % R^{-1}=| c^2-(g-1)*q    (g-1)*u    (g-1)*v -(g-1) |
-    %        |  ----------    -------    -------  ----- |
-    %        |      c^2         c^2        c^2     c^2  |
-    %        |                                          |
-    %        |      -v          0          1       0    |
-    %        |                                          |
-    %        | (g-1)*q-c*u  -(g-1)*u+c  -(g-1)*v  (g-1) |
-    %        |  ----------   ---------   -------  ----- |
-    %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
-    %        |_                                        _|
-    %
-    % where q = 0.5*(u^2+v^2) 
+        % Compute properties at cell interfaces using Roe avegares
 
-    evl(:,:,i-1) = [...
-         (U*gamma1+c*u)/(2*c2),-(c+u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2);...
-         (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2    , (v*gamma1)/c2    ,-(gamma1)/c2  ;...
-                -v            ,         0          ,         1        ,        0     ;...
-         (U*gamma1-c*u)/(2*c2), (c-u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2)];
+        % Construct matrix of right eigenvectors
+        %      _                     _ 
+        %     |                       |
+        %     |   1     1    0    1   |
+        %     |                       |
+        % R = |  u-c    u    0   u+c  |
+        %     |                       |
+        %     |   v     v    1    v   |
+        %     |                       |
+        %     |  H-uc   q    v   H+uc |
+        %     |_                     _|
+        %
+        % where q = 0.5*(u^2+v^2) 
+
+        evr(:,:,i) = [...
+              1  , 1 , 0 ,  1  ;...
+             u-c , u , 0 , u+c ;...
+              v  , v , 1 ,  v  ;...
+            H-u*c, U , v ,H+u*c];
+
+        % Construct matrix of left eigenvectors
+        %         _                                        _ 
+        %        |                                          |
+        %        | (g-1)*q+c*u  -(g-1)*u-c  -(g-1)*v  (g-1) |
+        %        |  ----------   ---------   -------  ----- |
+        %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
+        %        |                                          |
+        % R^{-1}=| c^2-(g-1)*q    (g-1)*u    (g-1)*v -(g-1) |
+        %        |  ----------    -------    -------  ----- |
+        %        |      c^2         c^2        c^2     c^2  |
+        %        |                                          |
+        %        |      -v          0          1       0    |
+        %        |                                          |
+        %        | (g-1)*q-c*u  -(g-1)*u+c  -(g-1)*v  (g-1) |
+        %        |  ----------   ---------   -------  ----- |
+        %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
+        %        |_                                        _|
+        %
+        % where q = 0.5*(u^2+v^2) 
+
+        evl(:,:,i) = [...
+             (U*gamma1+c*u)/(2*c2),-(c+u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2);...
+             (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2    , (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+                    -v            ,         0          ,         1        ,        0     ;...
+             (U*gamma1-c*u)/(2*c2), (c-u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2)];
+    end
 end
 
 % Produce the WENO reconstruction
@@ -617,16 +620,16 @@ dq = q(2:N,:,:)-q(1:N-1,:,:); % dq_{j+1/2}
 qL = (-q(I-1,:,:)+7*(q(I,:,:)+q(I+1,:,:))-q(I+2,:,:))/12; qR = qL; % dq_{j+1/2}
 
 % Compute eigenvectors at the cell interfaces j+1/2
-for i = 2:N
+for i = I
     % Using simple mean
-    r = (q(1,i-1)+q(1,i))/2;
-    u = (q(2,i-1)+q(2,i))/(2*r);
-    v = (q(3,i-1)+q(3,i))/(2*r);
-    E = (q(4,i-1)+q(4,i))/2;
+    r = (q(1,i)+q(1,i+1))/2;
+    u = (q(2,i)+q(2,i+1))/(2*r);
+    v = (q(3,i)+q(3,i+1))/(2*r);
+    E = (q(4,i)+q(4,i+1))/2;
     U = 0.5*(u^2+v^2);
-    p = gamma1*(E - 0.5*r*U^2);
+    p = gamma1*(E-r*U);
     H = (E+p)/r;
-    c2 = gamma1*(H - 0.5*U^2);
+    c2 = gamma1*(H-U);
     c = sqrt(gamma*p/r);
     
     % Compute properties at cell interfaces using Roe avegares
@@ -645,7 +648,7 @@ for i = 2:N
     %
     % where q = 0.5*(u^2+v^2) 
     
-    evr(:,:,i-1) = [...
+    evr(:,:,i) = [...
           1  , 0 , 1 ,  1   ;...
           u  , 1 , u ,  u   ;...
          v-c , 0 , v , v+c  ;...
@@ -671,11 +674,11 @@ for i = 2:N
     %
     % where q = 0.5*(u^2+v^2) 
 
-    evl(:,:,i-1) = [...
-         (U*gamma1+c*v)/(2*c2),-(u*gamma1)/(2*c2),-(c+v*gamma1)/(2*c2), gamma1/(2*c2);...
-                -u            ,         1        ,         0          ,        0     ;...
-         (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
-         (U*gamma1-c*v)/(2*c2), (u*gamma1)/(2*c2), (c+v*gamma1)/(2*c2), gamma1/(2*c2)];
+    evl = [...
+        (U*gamma1+c*v)/(2*c2),-(u*gamma1)/(2*c2),-(c+v*gamma1)/(2*c2), gamma1/(2*c2);...
+               -u            ,         1        ,         0          ,        0     ;...
+          (c2-U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+        (U*gamma1-c*v)/(2*c2),-(u*gamma1)/(2*c2), (c-v*gamma1)/(2*c2), gamma1/(2*c2)];
 end
 
 % Produce the WENO reconstruction
