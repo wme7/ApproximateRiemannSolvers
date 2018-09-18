@@ -5,24 +5,24 @@ global gamma; gamma = 1.4;
 
 % Build a 2x2 mesh
 dx=0.5; dy=0.5; [x,y]=meshgrid([0,1],[0,1]);
-[r0,u0,v0,p0] = Euler_IC2d(x,y,05);
-E0 = p0./((gamma-1)*r0)+0.5*(u0.^2+v0.^2);  % Total Energy
-c0 = sqrt(gamma*p0./r0);                    % Speed of sound
- q = cat(3, r0, r0.*u0, r0.*v0, r0.*E0);    % initial state
+[r0,u0,v0,p0] = Euler_IC2d(x,y,'Sod_x');
+E0 = p0./(gamma-1)+0.5*r0.*(u0.^2+v0.^2); % Total Energy
+c0 = sqrt(gamma*p0./r0);                  % Speed of sound
+q0 = cat(3, r0, r0.*u0, r0.*v0, E0);      % initial state
  
 % The corner data is obtained as
 i=1; j=1;
-qSW = squeeze( q( i , j ,:) );
-qSE = squeeze( q( i ,j+1,:) );
-qNW = squeeze( q(i+1, j ,:) );
-qNE = squeeze( q(i+1,j+1,:) );
+qSW = squeeze( q0( i , j ,:) );
+qSE = squeeze( q0( i ,j+1,:) );
+qNW = squeeze( q0(i+1, j ,:) );
+qNE = squeeze( q0(i+1,j+1,:) );
 
 
 % Just for comparison
-qL=q(i  ,j,:); qR=q( i ,j+1,:); fS=HLLE1Dflux(squeeze(qL),squeeze(qR),[1,0]);
-qL=q(i+1,j,:); qR=q(i+1,j+1,:); fN=HLLE1Dflux(squeeze(qL),squeeze(qR),[1,0]);
-qL=q(i  ,j,:); qR=q(i+1, j ,:); gW=HLLE1Dflux(squeeze(qL),squeeze(qR),[0,1]);
-qL=q(i,j+1,:); qR=q(i+1,j+1,:); gE=HLLE1Dflux(squeeze(qL),squeeze(qR),[0,1]);
+qL=q0(i  ,j,:); qR=q0( i ,j+1,:); fS=HLLE1Dflux(squeeze(qL),squeeze(qR),[1,0]);
+qL=q0(i+1,j,:); qR=q0(i+1,j+1,:); fN=HLLE1Dflux(squeeze(qL),squeeze(qR),[1,0]);
+qL=q0(i  ,j,:); qR=q0(i+1, j ,:); gW=HLLE1Dflux(squeeze(qL),squeeze(qR),[0,1]);
+qL=q0(i,j+1,:); qR=q0(i+1,j+1,:); gE=HLLE1Dflux(squeeze(qL),squeeze(qR),[0,1]);
 
 
 % West state
@@ -161,10 +161,10 @@ gOW = ( sWN*gSW - sWS*gNW + sWS*sWN*(qNW-qSW) )/(sWN-sWS);
 gOE = ( sEN*gSE - sES*gNE + sES*sEN*(qNE-qSE) )/(sEN-sES);
 
 % Compute the transverse intermediate fluxes (Balsara's solution)
-fOW = [qOW(2);gOW(3)+(qOW(2)^2-qOW(3)^2)/qOW(1);qOW(3)*qOW(2)/qOW(1);qOW(2)*gOW(4)/qOW(3)];
-fOE = [qOE(2);gOE(3)+(qOE(2)^2-qOE(3)^2)/qOE(1);qOE(3)*qOE(2)/qOE(1);qOE(2)*gOE(4)/qOE(3)];
-gSO = [qSO(3);qSO(2)*qSO(3)/qSO(1);fSO(2)+(qSO(3)^2-qSO(2)^2)/qSO(1);qSO(3)*fSO(4)/qSO(2)];
-gNO = [qNO(3);qNO(2)*qNO(3)/qNO(1);fNO(2)+(qNO(3)^2-qNO(2)^2)/qNO(1);qNO(3)*fNO(4)/qNO(2)];
+fOW = [qOW(2);gOW(3)+(qOW(2)^2-qOW(3)^2)/qOW(1);qOW(3)*qOW(2)/qOW(1);qOW(2)*gOW(4)/(qOW(3)+eps)];
+fOE = [qOE(2);gOE(3)+(qOE(2)^2-qOE(3)^2)/qOE(1);qOE(3)*qOE(2)/qOE(1);qOE(2)*gOE(4)/(qOE(3)+eps)];
+gSO = [qSO(3);qSO(2)*qSO(3)/qSO(1);fSO(2)+(qSO(3)^2-qSO(2)^2)/qSO(1);qSO(3)*fSO(4)/(qSO(2)+eps)];
+gNO = [qNO(3);qNO(2)*qNO(3)/qNO(1);fNO(2)+(qNO(3)^2-qNO(2)^2)/qNO(1);qNO(3)*fNO(4)/(qNO(2)+eps)];
 
 
 % Area of the main quadrilateral
@@ -202,7 +202,11 @@ k22 = dg2*(df1^2+df3^2+df4^2) - df2*(df1*dg1+df3*dg3+df4*dg4);
 k23 = dg3*(df1^2+df2^2+df4^2) - df3*(df1*dg1+df2*dg2+df4*dg4);
 k24 = dg4*(df1^2+df2^2+df3^2) - df4*(df1*dg1+df2*dg2+df3*dg3);
 
-%A = [df1,dg1;df2,dg2;df3,dg3;df4,dg4]; M=A'*A; detM=det(M);
+% Computing the determinant numerically
+% A = [df1,dg1;df2,dg2;df3,dg3;df4,dg4]; M=A'*A; detM=det(M);
+% b = [b1,b2,b3,b4]'; X = inv(M)*A'*b;
+
+% Computing explicitly the determinant
 detM = (df1*dg2-df2*dg1)^2 + (df1*dg3-df3*dg1)^2 + (df2*dg4-df4*dg2)^2 + ...
        (df3*dg2-df2*dg3)^2 + (df4*dg1-df1*dg4)^2 + (df4*dg3-df3*dg4)^2 ; % verified!
 
@@ -230,13 +234,19 @@ c2 = dq4*dq2*(qOE-qOW) + df4*dq2*fOE - df2*dq4*fOW + dg4*dq2*gOE - dg2*dq4*gOW;
 a11 = df1*dq3-df3*dq1;    a12 = dg1*dq3-dg3*dq1;
 a21 = df4*dq2-df2*dq4;    a22 = dg4*dq2-dg2*dq4;
 
-% Compute fluxes of the Strongly Interacting state: f** and g**
+% Numerical computation 
+%A = [a11,a12;a21,a22]; C=[c1,c2]'; X=inv(A)*c;
+
+% Explicit computation of the strongly Interacting state fluxes: f** and g**
 foo=( a22*c1-a12*c2)/(a11*a22-a12*a21);
 goo=(-a21*c1+a11*c2)/(a11*a22-a12*a21);
 
 % Compare solutions of methods
 disp([fOO,f00,foo]);
 disp([gOO,g00,goo]);
+
+disp('fN-fS-gW-gE');
+disp([fN,fS,gW,gE]);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % The HLLE-1d (for testing)
