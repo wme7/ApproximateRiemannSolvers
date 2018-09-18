@@ -468,6 +468,12 @@ evr=zeros(4,4,N-1);
 evl=zeros(4,4,N-1);
 h=zeros(2,N-1);
 
+% compute and store the differences for the entire domain
+dq = q(:,2:N,:)-q(:,1:N-1,:); % dq_{j+1/2}
+    
+% Compute the part of the reconstruction that is stencil-independent
+qL = (-q(:,I-1,:)+7*(q(:,I,:)+q(:,I+1,:))-q(:,I+2,:))/12; qR = qL; % dq_{j+1/2}
+
 % Compute eigenvectors at the cell interfaces j+1/2
 for i = 2:N
     % Using simple mean
@@ -529,12 +535,6 @@ for i = 2:N
                 -v            ,         0          ,         1        ,        0     ;...
          (U*gamma1-c*u)/(2*c2), (c-u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2)];
 end
-
-% compute and store the differences for the entire domain
-dq = q(:,2:N,:)-q(:,1:N-1,:); % dq_{j+1/2}
-    
-% Compute the part of the reconstruction that is stencil-independent
-qL = (-q(:,I-1,:)+7*(q(:,I,:)+q(:,I+1,:))-q(:,I+2,:))/12; qR = qL; % dq_{j+1/2}
 
 % Produce the WENO reconstruction
 for ip=1:EE
@@ -610,6 +610,12 @@ evr=zeros(4,4,N-1);
 evl=zeros(4,4,N-1);
 h=zeros(2,N-1);
 
+% compute and store the differences for the entire domain
+dq = q(2:N,:,:)-q(1:N-1,:,:); % dq_{j+1/2}
+    
+% Compute the part of the reconstruction that is stencil-independent
+qL = (-q(I-1,:,:)+7*(q(I,:,:)+q(I+1,:,:))-q(I+2,:,:))/12; qR = qL; % dq_{j+1/2}
+
 % Compute eigenvectors at the cell interfaces j+1/2
 for i = 2:N
     % Using simple mean
@@ -671,12 +677,6 @@ for i = 2:N
          (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
          (U*gamma1-c*v)/(2*c2), (u*gamma1)/(2*c2), (c+v*gamma1)/(2*c2), gamma1/(2*c2)];
 end
-
-% compute and store the differences for the entire domain
-dq = q(2:N,:,:)-q(1:N-1,:,:); % dq_{j+1/2}
-    
-% Compute the part of the reconstruction that is stencil-independent
-qL = (-q(I-1,:,:)+7*(q(I,:,:)+q(I+1,:,:))-q(I+2,:,:))/12; qR = qL; % dq_{j+1/2}
 
 % Produce the WENO reconstruction
 for ip=1:EE

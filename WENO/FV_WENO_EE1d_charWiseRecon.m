@@ -416,71 +416,72 @@ evr=zeros(3,3,N-1);
 evl=zeros(3,3,N-1);
 h=zeros(2,N-1);
 
-% Compute eigenvectors at the cell interfaces j+1/2
-for i = 2:N
-    switch averageMth
-        case 'simple' % Use simple averages
-            r = (q(1,i-1)+q(1,i))/2;
-            u = (q(2,i-1)+q(2,i))/(2*r);
-            E = (q(3,i-1)+q(3,i))/2;
-            p = gamma1*(E - 0.5*r*u^2);
-            H = (E+p)/r;
-            c2 = gamma1*(H - 0.5*u^2);
-            c = sqrt(c2);
-        case 'roe' % Use Roe averages
-            r_sqrtl = sqrt(q(1,i-1));
-            r_sqrtr = sqrt(q(1, i ));
-            pl = gamma1*(q(3,i-1) - 0.5*(q(2,i-1)^2)/q(1,i-1));
-            pr = gamma1*(q(3, i ) - 0.5*(q(2, i )^2)/q(1, i ));
-            r_sq2 = r_sqrtl + r_sqrtr;
-            u = (q(2,i-1)/r_sqrtl + q(2,i)/r_sqrtr)/r_sq2;
-            H = (((q(3,i-1)+pl)/r_sqrtl + (q(3,i)+pr)/r_sqrtr))/r_sq2;
-            c2 = gamma1*(H - 0.5*u^2);
-            c = sqrt(c2);
-    end
-    
-    % Compute properties at cell interfaces using Roe avegares
-    
-    % Construct matrix of right eigenvectors
-    %      _                    _ 
-    %     |                      |
-    %     |   1      1       1   |
-    %     |                      |
-    % R = |  u-c     u      u+c  |
-    %     |                      |
-    %     |  H-uc   u^2/2   H+uc |
-    %     |_                    _|
-    
-    evr(:,:,i-1) = [...
-          1  ,  1  ,  1   ;...
-         u-c ,  u  , u+c  ;...
-        H-u*c,u^2/2,H+u*c];
-
-    % Construct matrix of left eigenvectors
-    %                          _                                       _ 
-    %                         |                                         |
-    %                         |  uc/(gamma-1)+u^2/2  -c/(gamma-1)-u   1 |
-    %                         |                                         |
-    % R^{-1}=(gamma-1)/(2c^2)*|  2(H-u^2)             2u             -2 |
-    %                         |                                         |
-    %                         | -uc/(gamma-1)+u^2/2   c/(gamma-1)-u   1 |
-    %                         |_                                       _|
-
-    evl(:,:,i-1) = gamma1/(2*c^2)*[...
-         c*u/gamma1+u^2/2,-(c/gamma1+u), 1 ;...
-              2*(H-u^2)  ,    2*u      ,-2 ;...
-        -c*u/gamma1+u^2/2, c/gamma1-u  , 1];
-end
-
 % compute and store the differences for the entire domain
 dq = q(:,2:N)-q(:,1:N-1); % dq_{j+1/2}
     
 % Compute the part of the reconstruction that is stencil-independent
 qL = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; qR = qL; % dq_{j+1/2}
 
-% Produce the WENO reconstruction
-for ip=1:E
+% Compute eigenvectors at the cell interfaces j+1/2
+for i = I
+    % 1. Compute averages all cell interfaces
+    switch averageMth
+        case 'simple' % Use simple averages
+            r = (q(1,i)+q(1,i+1))/2;
+            u = (q(2,i)+q(2,i+1))/(2*r);
+            E = (q(3,i)+q(3,i+1))/2;
+            p = gamma1*(E - 0.5*r*u^2);
+            H = (E+p)/r;
+            c2 = gamma1*(H - 0.5*u^2);
+            c = sqrt(c2);
+        case 'roe' % Use Roe averages
+            r_sqrtl = sqrt(q(1, i ));
+            r_sqrtr = sqrt(q(1,i+1));
+            pl = gamma1*(q(3, i ) - 0.5*(q(2, i )^2)/q(1, i ));
+            pr = gamma1*(q(3,i+1) - 0.5*(q(2,i+1)^2)/q(1,i+1));
+            r_sq2 = r_sqrtl + r_sqrtr;
+            u = (q(2, i )/r_sqrtl + q(2,i+1)/r_sqrtr)/r_sq2;
+            H = (((q(3, i )+pl)/r_sqrtl + (q(3,i+1)+pr)/r_sqrtr))/r_sq2;
+            c2 = gamma1*(H - 0.5*u^2);
+            c = sqrt(c2);
+    end
     
+    % 2. Compute properties at cell interfaces using Roe avegares
+    
+        % Construct matrix of right eigenvectors
+        %      _                    _ 
+        %     |                      |
+        %     |   1      1       1   |
+        %     |                      |
+        % R = |  u-c     u      u+c  |
+        %     |                      |
+        %     |  H-uc   u^2/2   H+uc |
+        %     |_                    _|
+
+        evr(:,:,i) = [...
+              1  ,  1  ,  1   ;...
+             u-c ,  u  , u+c  ;...
+            H-u*c,u^2/2,H+u*c];
+
+        % Construct matrix of left eigenvectors
+        %                          _                                       _ 
+        %                         |                                         |
+        %                         |  uc/(gamma-1)+u^2/2  -c/(gamma-1)-u   1 |
+        %                         |                                         |
+        % R^{-1}=(gamma-1)/(2c^2)*|  2(H-u^2)             2u             -2 |
+        %                         |                                         |
+        %                         | -uc/(gamma-1)+u^2/2   c/(gamma-1)-u   1 |
+        %                         |_                                       _|
+
+        evl(:,:,i) = gamma1/(2*c^2)*[...
+             c*u/gamma1+u^2/2,-(c/gamma1+u), 1 ;...
+                  2*(H-u^2)  ,    2*u      ,-2 ;...
+            -c*u/gamma1+u^2/2, c/gamma1-u  , 1];
+end 
+
+% 3. Produce the WENO reconstruction
+for ip=1:E
+
     % Project the jumps at faces to the left characteristic space: qs
     for m2 =-2:2
        for i = I

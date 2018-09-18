@@ -163,67 +163,8 @@ R=3; I=R:N-R; % nf=N+1-2*R; % All internal faces
 % Reconstruction parameters
 epweno=1E-40; gamma1=gamma-1;
 
-% Eigenvalues parameters
+% Cell interface properties method
 averageMth='roe';
-evr=zeros(3,3,N-1);
-evl=zeros(3,3,N-1);
-
-% Compute eigenvectors at internal cell interfaces j+1/2
-for i = 2:N
-    switch averageMth
-        case 'simple' % Use simple averages
-            r = (q(1,i-1)+q(1,i))/2;
-            u = (q(2,i-1)+q(2,i))/(2*r);
-            E = (q(3,i-1)+q(3,i))/2;
-            p = gamma1*(E - 0.5*r*u^2);
-            H = (E+p)/r;
-            c2 = gamma1*(H - 0.5*u^2);
-            c = sqrt(c2);
-        case 'roe' % Use Roe averages
-            r_sqrtl = sqrt(q(1,i-1));
-            r_sqrtr = sqrt(q(1, i ));
-            pl = gamma1*(q(3,i-1) - 0.5*(q(2,i-1)^2)/q(1,i-1));
-            pr = gamma1*(q(3, i ) - 0.5*(q(2, i )^2)/q(1, i ));
-            r_sq2 = r_sqrtl + r_sqrtr;
-            u = (q(2,i-1)/r_sqrtl + q(2,i)/r_sqrtr)/r_sq2;
-            H = (((q(3,i-1)+pl)/r_sqrtl + (q(3,i)+pr)/r_sqrtr))/r_sq2;
-            c2 = gamma1*(H - 0.5*u^2);
-            c = sqrt(c2);
-    end
-    
-    % Compute properties at cell interfaces using Roe avegares
-    
-
-    % Construct matrix of right eigenvectors
-    %      _                    _ 
-    %     |                      |
-    %     |   1      1       1   |
-    %     |                      |
-    % R = |  u-c     u      u+c  |
-    %     |                      |
-    %     |  H-uc   u^2/2   H+uc |
-    %     |_                    _|
-    
-    evr(:,:,i-1) = [...
-          1  ,  1  ,  1   ;...
-         u-c ,  u  , u+c  ;...
-        H-u*c,u^2/2,H+u*c];
-
-    % Construct matrix of left eigenvectors
-    %                          _                                       _ 
-    %                         |                                         |
-    %                         |  uc/(gamma-1)+u^2/2  -c/(gamma-1)-u   1 |
-    %                         |                                         |
-    % R^{-1}=(gamma-1)/(2c^2)*|  2(H-u^2)             2u             -2 |
-    %                         |                                         |
-    %                         | -uc/(gamma-1)+u^2/2   c/(gamma-1)-u   1 |
-    %                         |_                                       _|
-
-    evl(:,:,i-1) = gamma1/(2*c^2)*[...
-         c*u/gamma1+u^2/2,-(c/gamma1+u), 1 ;...
-              2*(H-u^2)  ,    2*u      ,-2 ;...
-        -c*u/gamma1+u^2/2, c/gamma1-u  , 1];
-end
 
 % Compute flux differences for the entire domain
 dfp = fp(:,2:N)-fp(:,1:N-1); % df{+}_{j+1/2}
@@ -232,12 +173,66 @@ dfm = fm(:,2:N)-fm(:,1:N-1); % df{-}_{j+1/2}
 % Compute the part of the reconstruction that is stencil-independent
 f=fp+fm; flux=(-f(:,I-1)+7*(f(:,I)+f(:,I+1))-f(:,I+2))/12; % f_{j+1/2}
 
-% Compute the nonlinear part of the reconstruction
-for i = I  % all internal faces of the domain
+% Compute eigenvectors at internal cell interfaces j+1/2
+for i = I % all internal faces of the domain
+    % 1. Compute averages all cell interfaces
+    switch averageMth
+        case 'simple' % Use simple averages
+            r = (q(1,i)+q(1,i+1))/2;
+            u = (q(2,i)+q(2,i+1))/(2*r);
+            E = (q(3,i)+q(3,i+1))/2;
+            p = gamma1*(E - 0.5*r*u^2);
+            H = (E+p)/r;
+            c2 = gamma1*(H - 0.5*u^2);
+            c = sqrt(c2);
+        case 'roe' % Use Roe averages
+            r_sqrtl = sqrt(q(1, i ));
+            r_sqrtr = sqrt(q(1,i+1));
+            pl = gamma1*(q(3, i ) - 0.5*(q(2, i )^2)/q(1, i ));
+            pr = gamma1*(q(3,i+1) - 0.5*(q(2,i+1)^2)/q(1,i+1));
+            r_sq2 = r_sqrtl + r_sqrtr;
+            u = (q(2, i )/r_sqrtl + q(2,i+1)/r_sqrtr)/r_sq2;
+            H = (((q(3, i )+pl)/r_sqrtl + (q(3,i+1)+pr)/r_sqrtr))/r_sq2;
+            c2 = gamma1*(H - 0.5*u^2);
+            c = sqrt(c2);
+    end
     
+    % 2. Compute properties at cell interfaces using Roe avegares
+
+        % Construct matrix of right eigenvectors
+        %      _                    _ 
+        %     |                      |
+        %     |   1      1       1   |
+        %     |                      |
+        % R = |  u-c     u      u+c  |
+        %     |                      |
+        %     |  H-uc   u^2/2   H+uc |
+        %     |_                    _|
+
+        evr = [...
+              1  ,  1  ,  1   ;...
+             u-c ,  u  , u+c  ;...
+            H-u*c,u^2/2,H+u*c];
+
+        % Construct matrix of left eigenvectors
+        %                          _                                       _ 
+        %                         |                                         |
+        %                         |  uc/(gamma-1)+u^2/2  -c/(gamma-1)-u   1 |
+        %                         |                                         |
+        % R^{-1}=(gamma-1)/(2c^2)*|  2(H-u^2)             2u             -2 |
+        %                         |                                         |
+        %                         | -uc/(gamma-1)+u^2/2   c/(gamma-1)-u   1 |
+        %                         |_                                       _|
+
+        evl = gamma1/(2*c^2)*[...
+             c*u/gamma1+u^2/2,-(c/gamma1+u), 1 ;...
+                  2*(H-u^2)  ,    2*u      ,-2 ;...
+            -c*u/gamma1+u^2/2, c/gamma1-u  , 1];
+
+    % 3. Compute the nonlinear part of the reconstruction
     % Project the splitted flux jumps to the right eigenvector space
-    dfps=evl(:,:,i)*dfp(:,-2+i:i+1);
-    dfms=evl(:,:,i)*dfm(:,-1+i:i+2);
+    dfps=evl*dfp(:,-2+i:i+1);
+    dfms=evl*dfm(:,-1+i:i+2);
 
     % Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
     AmB=(dfps(:,1)-dfps(:,2));
@@ -254,7 +249,7 @@ for i = I  % all internal faces of the domain
     s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
     ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
     % flux contribution from $f_{i+1/2}^{+}$ reconstruction
-    flux(:,i+1-R) = flux(:,i+1-R) - evr(:,:,i+1-R)*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+    flux(:,i+1-R) = flux(:,i+1-R) - evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
 
     % Extrapolation $u_{i+1/2}^{+}$ == $f_{i+1/2}^{-}$
     AmB=(dfms(:,4)-dfms(:,3));
@@ -271,7 +266,7 @@ for i = I  % all internal faces of the domain
     s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
     ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
     % flux contribution from $f_{i+1/2}^{-}$ reconstruction
-    flux(:,i+1-R) = flux(:,i+1-R) + evr(:,:,i+1-R)*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+    flux(:,i+1-R) = flux(:,i+1-R) + evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
 
 end % loop over each interface
 

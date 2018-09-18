@@ -237,6 +237,13 @@ epweno=1E-40; gamma1=gamma-1;
 evr=zeros(4,4,N-1);
 evl=zeros(4,4,N-1);
 
+% Compute flux differences for the entire domain
+dfp = fp(:,2:N,:)-fp(:,1:N-1,:); % df{+}_{j+1/2}
+dfm = fm(:,2:N,:)-fm(:,1:N-1,:); % df{-}_{j+1/2}
+    
+% Compute the part of the reconstruction that is stencil-independent
+f=fp+fm; flux=(-f(:,I-1,:)+7*(f(:,I,:)+f(:,I+1,:))-f(:,I+2,:))/12; % f_{j+1/2}
+
 % Compute eigenvectors at the cell interfaces j+1/2
 for i = 2:N
     % Using simple mean
@@ -294,17 +301,10 @@ for i = 2:N
 
     evl(:,:,i-1) = [...
          (U*gamma1+c*u)/(2*c2),-(c+u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2);...
-         (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2    , (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+           (c2-U*gamma1)/c2   ,   (u*gamma1)/c2    , (v*gamma1)/c2    ,-(gamma1)/c2  ;...
                 -v            ,         0          ,         1        ,        0     ;...
          (U*gamma1-c*u)/(2*c2), (c-u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2)];
 end
-
-% Compute flux differences for the entire domain
-dfp = fp(:,2:N)-fp(:,1:N-1); % df{+}_{j+1/2}
-dfm = fm(:,2:N)-fm(:,1:N-1); % df{-}_{j+1/2}
-    
-% Compute the part of the reconstruction that is stencil-independent
-f=fp+fm; flux=(-f(:,I-1)+7*(f(:,I)+f(:,I+1))-f(:,I+2))/12; % f_{j+1/2}
 
 % Compute the nonlinear part of the reconstruction
 for i = I  % all internal faces of the domain
@@ -350,7 +350,7 @@ for i = I  % all internal faces of the domain
 end % loop over each interface
 end
 
-function [flux] = WENO5charWiseRecon_Y(q,fp,fm,N)
+function [flux] = WENO5charWiseRecon_Y(q,gp,gm,N)
 % *************************************************************************
 % Based on:
 % [1] Jiang, Guang-Shan, and Cheng-chin Wu. "A high-order WENO finite
@@ -373,6 +373,13 @@ epweno=1E-40; gamma1=gamma-1;
 % Eigenvalues parameters
 evr=zeros(4,4,N-1);
 evl=zeros(4,4,N-1);
+
+% Compute flux differences for the entire domain
+dfp = gp(2:N,:,:)-gp(1:N-1,:,:); % df{+}_{j+1/2}
+dfm = gm(2:N,:,:)-gm(1:N-1,:,:); % df{-}_{j+1/2}
+    
+% Compute the part of the reconstruction that is stencil-independent
+g=gp+gm; flux=(-g(I-1,:,:)+7*(g(I,:,:)+g(I+1,:,:))-g(I+2,:,:))/12; % f_{j+1/2}
 
 % Compute eigenvectors at the cell interfaces j+1/2
 for i = 2:N
@@ -432,16 +439,9 @@ for i = 2:N
     evl(:,:,i-1) = [...
          (U*gamma1+c*v)/(2*c2),-(u*gamma1)/(2*c2),-(c+v*gamma1)/(2*c2), gamma1/(2*c2);...
                 -u            ,         1        ,         0          ,        0     ;...
-         (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+           (c2-U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
          (U*gamma1-c*v)/(2*c2), (u*gamma1)/(2*c2), (c+v*gamma1)/(2*c2), gamma1/(2*c2)];
 end
-
-% Compute flux differences for the entire domain
-dfp = fp(:,2:N)-fp(:,1:N-1); % df{+}_{j+1/2}
-dfm = fm(:,2:N)-fm(:,1:N-1); % df{-}_{j+1/2}
-    
-% Compute the part of the reconstruction that is stencil-independent
-f=fp+fm; flux=(-f(:,I-1)+7*(f(:,I)+f(:,I+1))-f(:,I+2))/12; % f_{j+1/2}
 
 % Compute the nonlinear part of the reconstruction
 for i = I  % all internal faces of the domain
