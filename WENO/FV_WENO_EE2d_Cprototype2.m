@@ -461,84 +461,89 @@ function [qL,qR] = WENO5charWiseRecon_X(q,N)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 global gamma
 
-R=3; E=3; I=R:N-R; % R: substencil size, E: system components;
+R=3; EE=4; I=R:N-R; % R: substencil size, E: system components;
 epweno=1E-40; gamma1=gamma-1;
 
-averageMth='roe';
-evr=zeros(3,3,N-1);
-evl=zeros(3,3,N-1);
+evr=zeros(4,4,N-1);
+evl=zeros(4,4,N-1);
 h=zeros(2,N-1);
 
 % Compute eigenvectors at the cell interfaces j+1/2
 for i = 2:N
-    switch averageMth
-        case 'simple' % Use simple averages
-            r = (q(1,i-1)+q(1,i))/2;
-            u = (q(2,i-1)+q(2,i))/(2*r);
-            E = (q(3,i-1)+q(3,i))/2;
-            p = gamma1*(E - 0.5*r*u^2);
-            H = (E+p)/r;
-            c2 = gamma1*(H - 0.5*u^2);
-            c = sqrt(c2);
-        case 'roe' % Use Roe averages
-            r_sqrtl = sqrt(q(1,i-1));
-            r_sqrtr = sqrt(q(1, i ));
-            pl = gamma1*(q(3,i-1) - 0.5*(q(2,i-1)^2)/q(1,i-1));
-            pr = gamma1*(q(3, i ) - 0.5*(q(2, i )^2)/q(1, i ));
-            r_sq2 = r_sqrtl + r_sqrtr;
-            u = (q(2,i-1)/r_sqrtl + q(2,i)/r_sqrtr)/r_sq2;
-            H = (((q(3,i-1)+pl)/r_sqrtl + (q(3,i)+pr)/r_sqrtr))/r_sq2;
-            c2 = gamma1*(H - 0.5*u^2);
-            c = sqrt(c2);
-    end
+    % Using simple mean
+    r = (q(1,i-1)+q(1,i))/2;
+    u = (q(2,i-1)+q(2,i))/(2*r);
+    v = (q(3,i-1)+q(3,i))/(2*r);
+    E = (q(4,i-1)+q(4,i))/2;
+    U = 0.5*(u^2+v^2);
+    p = gamma1*(E - 0.5*r*U^2);
+    H = (E+p)/r;
+    c2 = gamma1*(H - 0.5*U^2);
+    c = sqrt(gamma*p/r);
     
     % Compute properties at cell interfaces using Roe avegares
     
     % Construct matrix of right eigenvectors
-    %      _                    _ 
-    %     |                      |
-    %     |   1      1       1   |
-    %     |                      |
-    % R = |  u-c     u      u+c  |
-    %     |                      |
-    %     |  H-uc   u^2/2   H+uc |
-    %     |_                    _|
+    %      _                     _ 
+    %     |                       |
+    %     |   1     1    0    1   |
+    %     |                       |
+    % R = |  u-c    u    0   u+c  |
+    %     |                       |
+    %     |   v     v    1    v   |
+    %     |                       |
+    %     |  H-uc   q    v   H+uc |
+    %     |_                     _|
+    %
+    % where q = 0.5*(u^2+v^2) 
     
     evr(:,:,i-1) = [...
-          1  ,  1  ,  1   ;...
-         u-c ,  u  , u+c  ;...
-        H-u*c,u^2/2,H+u*c];
+          1  , 1 , 0 ,  1  ;...
+         u-c , u , 0 , u+c ;...
+          v  , v , 1 ,  v  ;...
+        H-u*c, U , v ,H+u*c];
 
     % Construct matrix of left eigenvectors
-    %                          _                                       _ 
-    %                         |                                         |
-    %                         |  uc/(gamma-1)+u^2/2  -c/(gamma-1)-u   1 |
-    %                         |                                         |
-    % R^{-1}=(gamma-1)/(2c^2)*|  2(H-u^2)             2u             -2 |
-    %                         |                                         |
-    %                         | -uc/(gamma-1)+u^2/2   c/(gamma-1)-u   1 |
-    %                         |_                                       _|
+    %         _                                        _ 
+    %        |                                          |
+    %        | (g-1)*q+c*u  -(g-1)*u-c  -(g-1)*v  (g-1) |
+    %        |  ----------   ---------   -------  ----- |
+    %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
+    %        |                                          |
+    % R^{-1}=| c^2-(g-1)*q    (g-1)*u    (g-1)*v -(g-1) |
+    %        |  ----------    -------    -------  ----- |
+    %        |      c^2         c^2        c^2     c^2  |
+    %        |                                          |
+    %        |      -v          0          1       0    |
+    %        |                                          |
+    %        | (g-1)*q-c*u  -(g-1)*u+c  -(g-1)*v  (g-1) |
+    %        |  ----------   ---------   -------  ----- |
+    %        |    2*c^2        2*c^2       2*c^2  2*c^2 |
+    %        |_                                        _|
+    %
+    % where q = 0.5*(u^2+v^2) 
 
-    evl(:,:,i-1) = gamma1/(2*c^2)*[...
-         c*u/gamma1+u^2/2,-(c/gamma1+u), 1 ;...
-              2*(H-u^2)  ,    2*u      ,-2 ;...
-        -c*u/gamma1+u^2/2, c/gamma1-u  , 1];
+    evl(:,:,i-1) = [...
+         (U*gamma1+c*u)/(2*c2),-(c+u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2);...
+         (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2    , (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+                -v            ,         0          ,         1        ,        0     ;...
+         (U*gamma1-c*u)/(2*c2), (c-u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2)];
 end
 
 % compute and store the differences for the entire domain
-dq = q(:,2:N)-q(:,1:N-1); % dq_{j+1/2}
+dq = q(:,2:N,:)-q(:,1:N-1,:); % dq_{j+1/2}
     
 % Compute the part of the reconstruction that is stencil-independent
-qL = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; qR = qL; % dq_{j+1/2}
+qL = (-q(:,I-1,:)+7*(q(:,I,:)+q(:,I+1,:))-q(:,I+2,:))/12; qR = qL; % dq_{j+1/2}
 
 % Produce the WENO reconstruction
-for ip=1:E
+for ip=1:EE
     
     % Project the jumps at faces to the left characteristic space: qs
     for m2 =-2:2
        for i = I
           qs(m2+R,i) = 0;
-          for e=1:E      
+          for e=1:EE      
             qs(m2+R,i) = qs(m2+R,i) + evl(ip,e,i)*dq(e,i+m2);
           end
        end
@@ -574,7 +579,7 @@ for ip=1:E
     end % loop over each side of interface
 
     % Project to the physical space:
-    for e=1:E
+    for e=1:EE
         for i=I
             qL(e,i+1-R) = qL(e,i+1-R) + evr(e,ip,i)*h(1,i);
             qR(e,i+1-R) = qR(e,i+1-R) + evr(e,ip,i)*h(2,i);
@@ -598,84 +603,89 @@ function [qL,qR] = WENO5charWiseRecon_Y(q,N)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 global gamma
 
-R=3; E=3; I=R:N-R; % R: substencil size, E: system components;
+R=3; EE=4; I=R:N-R; % R: substencil size, E: system components;
 epweno=1E-40; gamma1=gamma-1;
 
-averageMth='roe';
-evr=zeros(3,3,N-1);
-evl=zeros(3,3,N-1);
+evr=zeros(4,4,N-1);
+evl=zeros(4,4,N-1);
 h=zeros(2,N-1);
 
 % Compute eigenvectors at the cell interfaces j+1/2
 for i = 2:N
-    switch averageMth
-        case 'simple' % Use simple averages
-            r = (q(1,i-1)+q(1,i))/2;
-            u = (q(2,i-1)+q(2,i))/(2*r);
-            E = (q(3,i-1)+q(3,i))/2;
-            p = gamma1*(E - 0.5*r*u^2);
-            H = (E+p)/r;
-            c2 = gamma1*(H - 0.5*u^2);
-            c = sqrt(c2);
-        case 'roe' % Use Roe averages
-            r_sqrtl = sqrt(q(1,i-1));
-            r_sqrtr = sqrt(q(1, i ));
-            pl = gamma1*(q(3,i-1) - 0.5*(q(2,i-1)^2)/q(1,i-1));
-            pr = gamma1*(q(3, i ) - 0.5*(q(2, i )^2)/q(1, i ));
-            r_sq2 = r_sqrtl + r_sqrtr;
-            u = (q(2,i-1)/r_sqrtl + q(2,i)/r_sqrtr)/r_sq2;
-            H = (((q(3,i-1)+pl)/r_sqrtl + (q(3,i)+pr)/r_sqrtr))/r_sq2;
-            c2 = gamma1*(H - 0.5*u^2);
-            c = sqrt(c2);
-    end
+    % Using simple mean
+    r = (q(1,i-1)+q(1,i))/2;
+    u = (q(2,i-1)+q(2,i))/(2*r);
+    v = (q(3,i-1)+q(3,i))/(2*r);
+    E = (q(4,i-1)+q(4,i))/2;
+    U = 0.5*(u^2+v^2);
+    p = gamma1*(E - 0.5*r*U^2);
+    H = (E+p)/r;
+    c2 = gamma1*(H - 0.5*U^2);
+    c = sqrt(gamma*p/r);
     
     % Compute properties at cell interfaces using Roe avegares
     
     % Construct matrix of right eigenvectors
     %      _                    _ 
     %     |                      |
-    %     |   1      1       1   |
+    %     |   1    0   1    1    |
     %     |                      |
-    % R = |  u-c     u      u+c  |
+    %     |   u    1   u    u    |
     %     |                      |
-    %     |  H-uc   u^2/2   H+uc |
+    % R = |  v-c   0   v   v+c   |
+    %     |                      |
+    %     |  H-vc  u   q   H+vc  |
     %     |_                    _|
+    %
+    % where q = 0.5*(u^2+v^2) 
     
     evr(:,:,i-1) = [...
-          1  ,  1  ,  1   ;...
-         u-c ,  u  , u+c  ;...
-        H-u*c,u^2/2,H+u*c];
+          1  , 0 , 1 ,  1   ;...
+          u  , 1 , u ,  u   ;...
+         v-c , 0 , v , v+c  ;...
+        H-v*c, u , U ,H+v*c];
 
     % Construct matrix of left eigenvectors
-    %                          _                                       _ 
-    %                         |                                         |
-    %                         |  uc/(gamma-1)+u^2/2  -c/(gamma-1)-u   1 |
-    %                         |                                         |
-    % R^{-1}=(gamma-1)/(2c^2)*|  2(H-u^2)             2u             -2 |
-    %                         |                                         |
-    %                         | -uc/(gamma-1)+u^2/2   c/(gamma-1)-u   1 |
-    %                         |_                                       _|
+    %         _                                        _ 
+    %        |                                          |
+    %        | (g-1)*q+c*v  -(g-1)*u  -(g-1)*v-c  (g-1) |
+    %        |  ----------   -------   ---------  ----- |
+    %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
+    %        |                                          |
+    % R^{-1}=|      -u          1          0       0    |
+    %        |                                          |
+    %        | c^2-(g-1)*q   (g-1)*u    (g-1)*v  -(g-1) |
+    %        |  ----------   -------    -------   ----- |
+    %        |      c^2        c^2        c^2      c^2  |
+    %        |                                          |
+    %        | (g-1)*q-c*v  -(g-1)*u  -(g-1)*v+c  (g-1) |
+    %        |  ----------   -------   ---------  ----- |
+    %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
+    %        |_                                        _|
+    %
+    % where q = 0.5*(u^2+v^2) 
 
-    evl(:,:,i-1) = gamma1/(2*c^2)*[...
-         c*u/gamma1+u^2/2,-(c/gamma1+u), 1 ;...
-              2*(H-u^2)  ,    2*u      ,-2 ;...
-        -c*u/gamma1+u^2/2, c/gamma1-u  , 1];
+    evl(:,:,i-1) = [...
+         (U*gamma1+c*v)/(2*c2),-(u*gamma1)/(2*c2),-(c+v*gamma1)/(2*c2), gamma1/(2*c2);...
+                -u            ,         1        ,         0          ,        0     ;...
+         (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+         (U*gamma1-c*v)/(2*c2), (u*gamma1)/(2*c2), (c+v*gamma1)/(2*c2), gamma1/(2*c2)];
 end
 
 % compute and store the differences for the entire domain
-dq = q(:,2:N)-q(:,1:N-1); % dq_{j+1/2}
+dq = q(2:N,:,:)-q(1:N-1,:,:); % dq_{j+1/2}
     
 % Compute the part of the reconstruction that is stencil-independent
-qL = (-q(:,I-1)+7*(q(:,I)+q(:,I+1))-q(:,I+2))/12; qR = qL; % dq_{j+1/2}
+qL = (-q(I-1,:,:)+7*(q(I,:,:)+q(I+1,:,:))-q(I+2,:,:))/12; qR = qL; % dq_{j+1/2}
 
 % Produce the WENO reconstruction
-for ip=1:E
+for ip=1:EE
     
     % Project the jumps at faces to the left characteristic space: qs
     for m2 =-2:2
        for i = I
           qs(m2+R,i) = 0;
-          for e=1:E      
+          for e=1:EE      
             qs(m2+R,i) = qs(m2+R,i) + evl(ip,e,i)*dq(e,i+m2);
           end
        end
@@ -711,7 +721,7 @@ for ip=1:E
     end % loop over each side of interface
 
     % Project to the physical space:
-    for e=1:E
+    for e=1:EE
         for i=I
             qL(e,i+1-R) = qL(e,i+1-R) + evr(e,ip,i)*h(1,i);
             qR(e,i+1-R) = qR(e,i+1-R) + evr(e,ip,i)*h(2,i);
