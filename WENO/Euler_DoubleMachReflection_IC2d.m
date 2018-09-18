@@ -54,7 +54,7 @@ function [r0,u0,v0,p0,preshock,postshock,shockSpeed] = Euler_DoubleMachReflectio
     r0 = r1*ones(ny,nx);
     u0 = u1*ones(ny,nx);
     v0 = v1*ones(ny,nx);
-    p0 = v1*ones(ny,nx);
+    p0 = p1*ones(ny,nx);
 
     % Shock state
     mask = x<x0+y*tan(pi/6); % tan(pi/6)=1/sqrt(3);

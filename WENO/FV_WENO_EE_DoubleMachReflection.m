@@ -83,7 +83,7 @@ if plotFig
 end
 
 % Select Solver
-solver = 1;
+solver = 2;
 switch solver
     case 1, FV_EE2d = @FV_WENO_EE2d; % Component-wise reconstruction
     case 2, FV_EE2d = @FV_WENO_EE2d_PrimitiveRecon; % Primitive-wise reconstruction
