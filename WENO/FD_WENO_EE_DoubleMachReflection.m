@@ -34,7 +34,7 @@ nx      = 241;     % Number of cells/Elements in x
 ny      = 061;     % Number of cells/Elements in y
 n       = 5;       % Degrees of freedom: ideal air=5, monoatomic gas=3.
 fspltMth='LF';     % LF, LLF.
-reconMth='WENO5';  % WENO5, WENO7, Poly5, Poly7;
+reconMth='WENO7';  % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Visualize evolution of domain
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -82,7 +82,7 @@ if plotFig
 end
 
 % Select Solver
-solver = 2;
+solver = 1;
 switch solver
     case 1, FD_EE2d = @FD_WENO_EE2d; % Component-wise reconstruction
     case 2, FD_EE2d = @FD_WENO_EE2d_CharactRecon; % Characteristic-wise reconstruction
@@ -119,10 +119,10 @@ while t < tEnd
     a = max(abs([lambda1(:);lambda2(:)])); dt=CFL*min(dx/a,dy/a); 
     
     % update iteration counter 
-    it=it+1;
+    it=it+1; disp(it);
     
     % Plot figure
-    if plotFig && rem(it,10) == 0
+    if plotFig && rem(it,1) == 0
         set(h1,'ZData',r);
         set(h2,'ZData',u);
         set(h3,'ZData',v);
@@ -156,7 +156,7 @@ s1=subplot(2,2,1); contour(x,y,r,n); axis(region); xlabel('x(m)'); ylabel('Densi
 s2=subplot(2,2,2); contour(x,y,U,n); axis(region); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
 s3=subplot(2,2,3); contour(x,y,p,n); axis(region); xlabel('x(m)'); ylabel('Pressure (Pa)');
 s6=subplot(2,2,4); contour(x,y,e,n); axis(region); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,[reconMth,'-',fspltMth,' VFS Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);
+title(s1,['FD ',reconMth,'-',fspltMth,' VFS Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);
 
 figure(2); v=linspace(1.731,20.92,n); % contour lines
 contour(x,y,r,v); axis(region); xlabel('x(m)'); ylabel('Density (kg/m^3)');

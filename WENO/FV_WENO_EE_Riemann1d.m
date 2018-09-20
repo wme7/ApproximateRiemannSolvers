@@ -27,7 +27,7 @@ tFinal	= 0.12;	  % Final time;
 nx      = 200;    % Number of cells;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
 IC      = 01;	  % 10 IC cases are available;
-fluxMth ='LF';  % ROE, LF, RUS, AUSM, HLLE, HLLC;
+fluxMth ='LF';    % ROE, LF, LLF, AUSM, HLLE, HLLC;
 reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Plot evolution
 

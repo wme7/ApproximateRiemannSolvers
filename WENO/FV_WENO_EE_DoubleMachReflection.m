@@ -33,8 +33,8 @@ tEnd    = 0.20;   % Final time;
 nx      = 240;    % Number of cells/Elements in x;
 ny      = 060;    % Number of cells/Elements in y;
 n       = 5;      % Degrees of freedom: ideal air=5, monoatomic gas=3;
-fluxMth ='RUS';   % LF, RUS, ROE, HLLE, HLLC;
-reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
+fluxMth ='LF';    % LF, LLF, ROE, HLLE, HLLC;
+reconMth='WENO7'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true ;  % Visualize evolution of domain.
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -75,7 +75,6 @@ if isempty(poolobj); parpool('local',4); end
 % Configure figure 
 if plotFig
     figure(1); set(gcf, 'Position', [0, 500, 1300, 400]);
-    %q0=DMR_BCs(q0,0,nx,ny,dx,dy,R); [~,h1]=contourf(q0(:,:,1)); xlabel('x'); ylabel('y'); title('\rho');
     subplot(2,2,1); [~,h1]=contourf(x,y,r0); axis('equal'); xlabel('x'); ylabel('y'); title('\rho');
     subplot(2,2,2); [~,h2]=contourf(x,y,u0); axis('equal'); xlabel('x'); ylabel('y'); title('u_x');
     subplot(2,2,3); [~,h3]=contourf(x,y,v0); axis('equal'); xlabel('x'); ylabel('y'); title('u_y');
@@ -83,7 +82,7 @@ if plotFig
 end
 
 % Select Solver
-solver = 2;
+solver = 1;
 switch solver
     case 1, FV_EE2d = @FV_WENO_EE2d; % Component-wise reconstruction
     case 2, FV_EE2d = @FV_WENO_EE2d_PrimitiveRecon; % Primitive-wise reconstruction
@@ -124,8 +123,7 @@ while t < tEnd
     it=it+1;
     
     % Plot figure
-    if plotFig && rem(it,10) == 0
-        %q=DMR_BCs(q,t,nx,ny,dx,dy,R); set(h1,'ZData',q(:,:,1)); % for debuging
+    if plotFig && rem(it,1) == 0
         set(h1,'ZData',r);
         set(h2,'ZData',u);
         set(h3,'ZData',v);
@@ -159,57 +157,8 @@ s1=subplot(2,2,1); contour(x,y,r,n); axis(region); xlabel('x(m)'); ylabel('Densi
 s2=subplot(2,2,2); contour(x,y,U,n); axis(region); xlabel('x(m)'); ylabel('Velocity Magnitud (m/s)');
 s3=subplot(2,2,3); contour(x,y,p,n); axis(region); xlabel('x(m)'); ylabel('Pressure (Pa)');
 s4=subplot(2,2,4); contour(x,y,e,n); axis(region); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,[reconMth,'-',fluxMth,' Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);
+title(s1,['FV ',reconMth,'-',fluxMth,' Double Mach Reflection Test']); title(s2,['time t=',num2str(t),'[s]']);
 
 figure(2); v=linspace(1.731,20.92,n); % contour lines
 contour(x,y,r,v); axis(region); xlabel('x(m)'); ylabel('Density (kg/m^3)');
 title([num2str(n),' contour lines from 1.731 to 20.92, grid']);
-
-% %% %%%%%%%%%%%%%%%%%%%
-% % Boundary Conditions  (Do not delete!)
-% %%%%%%%%%%%%%%%%%%%%%%
-% 
-% function q=DMR_BCs(q,t,nx,ny,dx,dy,R)
-% global  preshock postshock mesh_wedge_position
-% 
-% % Static BCs
-% for i=1:R
-%     q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
-% end
-% % Static BCs at the bottom of domain
-% for j=1:R
-%     for i=R+1:nx-R
-%         if i<(R+mesh_wedge_position)
-%             q(j,i,:)=q(R+1,i,:); % outflow condition : Neumann BC
-%         else
-%             q(j,i,:)=q(R+1,i,:); q(j,i,3)=-q(R+1,i,3); % EE reflective BC
-%         end
-%     end
-% end
-% % Time dependent BCs at the top of domain: moving shock
-% for j=ny+1-R:ny % only gosht cells at the top
-%     for i=R+1:nx-R % evaluate all x domain
-%         if distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < -3*dx % mesh_shock
-%             q(j,i,:)=q(ny-R,i,:); % Neumann BCs
-%         elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) > 3*dx % mesh_shock
-%             q(j,i,:)=q(ny-R,i,:); % Neumann BCs
-%         elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < 0 % mesh_shock
-%             q(j,i,:)=postshock; % Dirichlet BCs
-%         else
-%             q(j,i,:)=preshock; % Dirichlet BCs
-%         end
-%     end
-% end
-% 
-% end
-% 
-% %%%%%%%%%%%%%%%%%%%
-% % Distance to shock 
-% %%%%%%%%%%%%%%%%%%%
-% 
-% function distance = distance_to_shock(x,y,t)
-%     global shock_speed
-%     shock_slope = 1/tan(pi/6); % from problem definition
-%     wedge_position = 1/6; % from problem definition
-%     distance = (shock_slope*(x-wedge_position-shock_speed*t)-y) / sqrt((shock_slope)^2+1);
-% end

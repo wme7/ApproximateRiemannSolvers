@@ -29,14 +29,14 @@ global gamma
 
 %% Parameters
 CFL     = 0.60;    % CFL number
-tEnd    = 0.25;    % Final time
+tEnd    = 0.30;    % Final time
 nx      = 201;     % Number of cells/Elements in x
 ny      = 201;     % Number of cells/Elements in y
 n       = 5;       % Degrees of freedom: ideal air=5, monoatomic gas=3.
-IC      = 05;      % 19 IC cases are available
+IC      = 03;      % 19 IC cases are available
 fspltMth='LF';     % LF, LLF.
 reconMth='WENO5';  % WENO5, WENO7, Poly5, Poly7;
-plotFig = true;   % Visualize evolution of domain
+plotFig = false;   % Visualize evolution of domain
 
 % Ratio of specific heats for ideal di-atomic gas
 gamma=(n+2)/n;
@@ -118,7 +118,7 @@ while t < tEnd
     it=it+1;
     
     % Plot figure
-    if plotFig && rem(it,2) == 0
+    if plotFig && rem(it,10) == 0
         set(h1,'ZData',r(in,jn));
         set(h2,'ZData',u(in,jn));
         set(h3,'ZData',v(in,jn));

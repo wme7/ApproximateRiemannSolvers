@@ -26,7 +26,7 @@ CFL     = 0.60;	  % CFL number;
 tFinal	= 0.038;  % Final time;
 nx      = 400;    % Number of cells;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
-fluxMth ='HLLC';   % ROE, LF, RUS, AUSM, HLLE, HLLC;
+fluxMth ='HLLC';  % ROE, LF, LLF, AUSM, HLLE, HLLC;
 reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Plot evolution
 

@@ -1,4 +1,4 @@
-function res = FV_WENO_EE2d(q,a,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
+function res = FV_WENO_EE2d_notOptimized(q,a,nx,ny,dx,dy,t,fluxMethod,Recon,Test)
 % Compute RHS of the semi-discrete form of the Euler equations.
 global gamma preshock postshock mesh_wedge_position
 
@@ -110,7 +110,7 @@ for j=1:nc % for all interior cells
         switch fluxMethod
             case 'LF',  flux(j,i,:) = LFflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0],a); % Lax Friedrichs
             case 'ROE', flux(j,i,:) = ROEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]);  % Roe
-            case 'RUS', flux(j,i,:) = RUSflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]);  % Rusanov
+            case 'LLF', flux(j,i,:) = RUSflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]);  % Rusanov
             case 'HLLE',flux(j,i,:) = HLLEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]); % HLLE
             case 'HLLC',flux(j,i,:) = HLLCflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[1,0]); % HLLC
             otherwise, error('flux method not available ;P');
@@ -159,7 +159,7 @@ for i=1:nc % for all interior cells
         switch fluxMethod
             case 'LF',  flux(j,i,:) = LFflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1],a); % Lax Friedrichs
             case 'ROE', flux(j,i,:) = ROEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]);  % Roe
-            case 'RUS', flux(j,i,:) = RUSflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]);  % Rusanov
+            case 'LLF', flux(j,i,:) = RUSflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]);  % Rusanov
             case 'HLLE',flux(j,i,:) = HLLEflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]); % HLLE
             case 'HLLC',flux(j,i,:) = HLLCflux(squeeze(qL(j,i,:)),squeeze(qR(j,i,:)),[0,1]); % HLLC
         end

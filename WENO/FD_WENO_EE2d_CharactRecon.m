@@ -22,8 +22,8 @@ global preshock postshock mesh_wedge_position
 
     % Identify number of gost cells
     switch Recon
-        case {'WENO5','Poly5'}, R=3; % R: stencil size and number of gost cells
-        case {'WENO7','Poly7'}, R=4;
+        case {'WENO5'}, R=3; % R: stencil size and number of gost cells
+        case {'WENO7'}, R=4;
         otherwise, error('reconstruction not available ;P');
     end
 
@@ -45,8 +45,11 @@ global preshock postshock mesh_wedge_position
             end
         case 'DMR' % Set DMR test BCs
             % Static BCs
-            for i=1:R
-                q(:,i,:)=q(:,R+1,:); q(:,nx+1-i,:)=q(:,nx-R,:);	% Neumann BCs
+            for j=R+1:ny-R
+                for i=1:R
+                    q(j,i,:)=q(j,R+1,:); q(j,nx+1-i,:)=q(j,nx-R,:);	% Neumann BCs
+                    %q(j,i,:)=postshock; q(j,nx+1-i,:)=preshock;	% Dirichlet BCs
+                end
             end
             % Static BCs at the bottom of domain
             for j=1:R
@@ -61,11 +64,7 @@ global preshock postshock mesh_wedge_position
             % Time dependent BCs at the top of domain: moving shock
             for j=ny+1-R:ny % only gosht cells at the top
                 for i=R+1:nx-R % evaluate all x domain
-                    if distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < -3*dx % mesh_shock
-                        q(j,i,:)=q(ny-R,i,:); % Neumann BC
-                    elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) > 3*dx % mesh_shock
-                        q(j,i,:)=q(ny-R,i,:); % Neumann BC
-                    elseif distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < 0 % mesh_shock
+                    if distance_to_shock(i*dx+dx/2,(j+R)*dy+dy/2,t) < 0 % mesh_shock
                         q(j,i,:)=postshock; % Dirichlet BCs
                     else
                         q(j,i,:)=preshock; % Dirichlet BCs
@@ -100,16 +99,6 @@ global preshock postshock mesh_wedge_position
     res=zeros(size(q)); nc=ny-2*R; nf=nx+1-2*R;
 
     % Flux contribution to the residual of every cell
-%     for e=1:E
-%         for j=1:nc % for all interior cells
-%             res(j+R,R+1,e) = res(j+R,R+1,e) - flux(e,j+nc*(1-1))/dx; % left face of cell j=4.
-%             for i = 2:nf-1 % for all interior faces
-%                 res(j+R,i+R-1,e) = res(j+R,i+R-1,e) + flux(e,j+nc*(i-1))/dx;
-%                 res(j+R, i+R ,e) = res(j+R, i+R ,e) - flux(e,j+nc*(i-1))/dx;
-%             end
-%             res(j+R,nx-R,e) = res(j+R,nx-R,e) + flux(e,j+nc*(nf-1))/dx; % right face of cell j=N-3.
-%         end
-%     end
     for e=1:E
         for j=1:nc % for all interior cells
             res(j+R,R+1,e) = res(j+R,R+1,e) - flux(j,1,e)/dx; % left face of cell j=4.
@@ -144,16 +133,6 @@ global preshock postshock mesh_wedge_position
     nc=nx-2*R; nf=ny+1-2*R;
     
     % Flux contribution to the residual of every cell
-%     for e=1:E
-%         for i=1:nc % for all interior cells
-%             res(R+1,i+R,e) = res(R+1,i+R,e) - flux(e,1+nf*(i-1))/dy;
-%             for j=2:nf-1 % for all interior cells
-%                 res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(e,j+nf*(i-1))/dy;
-%                 res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(e,j+nf*(i-1))/dy;
-%             end
-%             res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(e,nf+nf*(i-1))/dy;
-%         end
-%     end
     for e=1:E
         for i=1:nc % for all interior cells
             res(R+1,i+R,e) = res(R+1,i+R,e) - flux(1,i,e)/dy;
@@ -327,6 +306,28 @@ for j = 1:size(q,1)
         dfps=evl*squeeze(dfp(j,-2+i:i+1,:))';
         dfms=evl*squeeze(dfm(j,-1+i:i+2,:))';
 
+        for idx=1:2
+            
+            im=(-1)^(idx+1); i1=im+R; in1=-im+R; in2=-2*im+R;
+            % idx=1: (reconstruct qL) [in2,in1,R,i1]=[1,2,3,4];
+            % idx=2: (reconstruct qR) [in2,in1,R,i1]=[5,4,3,2];
+            
+            AmB=im*(qs(in2,i)-qs(in1,i));
+            BmC=im*(qs(in1,i)-qs( R ,i));
+            CmD=im*(qs( R ,i)-qs( i1,i));
+
+            IS1=13*AmB^2+3*(  qs(in2,i)-3*qs(in1,i))^2;
+            IS2=13*BmC^2+3*(  qs(in1,i)+  qs( R ,i))^2;
+            IS3=13*CmD^2+3*(3*qs( R ,i)-  qs( i1,i))^2;
+
+            IS1=(epweno+IS1)^2;
+            IS2=(epweno+IS2)^2;
+            IS3=(epweno+IS3)^2;
+            s1=IS2*IS3; s2=6*IS1*IS3; s3=3*IS1*IS2;
+            st0=1/(s1+s2+s3); s1=s1*st0; s3=s3*st0;
+
+            h(idx,i) = (s1*(BmC-AmB)+(0.5*s3-0.25)*(CmD-BmC))/3;
+            
         % Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
         AmB=(dfps(:,1)-dfps(:,2));
         BmC=(dfps(:,2)-dfps(:,3));
@@ -485,6 +486,7 @@ for j =1:size(q,2)
         h=evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
         for e=1:EE
             flux(i+1-R,j,e) = flux(i+1-R,j,e) - h(e);
+            out=isreal(flux(i+1-R,j,e)); if ~out, disp([i,j,e]); end
         end
 
         % Extrapolation $u_{i+1/2}^{+}$ == $f_{i+1/2}^{-}$
@@ -505,6 +507,7 @@ for j =1:size(q,2)
         h=evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
         for e=1:EE
             flux(i+1-R,j,e) = flux(i+1-R,j,e) + h(e);
+            out=isreal(flux(i+1-R,j,e)); if ~out, disp([i,j,e]); end
         end
     end % loop over each interface
 end

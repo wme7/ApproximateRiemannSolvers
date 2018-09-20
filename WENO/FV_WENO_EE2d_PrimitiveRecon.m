@@ -115,7 +115,7 @@ for c=1:N
     switch fluxMethod
         case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[1,0],a); % Lax Friedrichs
         case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[1,0]);  % Roe
-        case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[1,0]);  % Rusanov
+        case 'LLF', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[1,0]);  % Rusanov
         case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[1,0]); % HLLE
         case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[1,0]); % HLLC
         otherwise, error('flux method not available ;P');
@@ -175,7 +175,7 @@ for c=1:N
     switch fluxMethod
         case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[0,1],a); % Lax Friedrichs
         case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[0,1]);  % Roe
-        case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[0,1]);  % Rusanov
+        case 'LLF', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[0,1]);  % Rusanov
         case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[0,1]); % HLLE
         case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[0,1]); % HLLC
     end

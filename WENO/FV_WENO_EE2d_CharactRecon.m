@@ -101,7 +101,7 @@ global preshock postshock mesh_wedge_position
         switch fluxMethod
             case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[1,0],a); % Lax Friedrichs
             case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[1,0]);  % Roe
-            case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[1,0]);  % Rusanov
+            case 'LLF', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[1,0]);  % Rusanov
             case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[1,0]); % HLLE
             case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[1,0]); % HLLC
             otherwise, error('flux method not available ;P');
@@ -123,7 +123,7 @@ global preshock postshock mesh_wedge_position
 % 5. Produce reconstruction at cell faces in y-direction
     
     % Compute primitive variables at solution points (they still in memory)
-    clear qL qR wL wR flux;
+    clear qL qR flux;
 
     % internal cells 
     ic=R+1:nx-R;
@@ -131,8 +131,8 @@ global preshock postshock mesh_wedge_position
     % Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
     for e=1:E
         switch Recon
-            case 'WENO5', [qL,qR] = WENO5charWiseRecon_Y(q(ic,:,:),ny);
-            %case 'WENO7', [qL,qR] = WENO7charWiseRecon_Y(q(ic,:,:),ny);
+            case 'WENO5', [qL,qR] = WENO5charWiseRecon_Y(q(:,ic,:),ny);
+            %case 'WENO7', [qL,qR] = WENO7charWiseRecon_Y(q(:,ic,:),ny);
         end
     end
 
@@ -144,7 +144,7 @@ global preshock postshock mesh_wedge_position
         switch fluxMethod
             case 'LF',  flux(:,c) = LFflux(qL(:,c),qR(:,c),[0,1],a); % Lax Friedrichs
             case 'ROE', flux(:,c) = ROEflux(qL(:,c),qR(:,c),[0,1]);  % Roe
-            case 'RUS', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[0,1]);  % Rusanov
+            case 'LLF', flux(:,c) = RUSflux(qL(:,c),qR(:,c),[0,1]);  % Rusanov
             case 'HLLE',flux(:,c) = HLLEflux(qL(:,c),qR(:,c),[0,1]); % HLLE
             case 'HLLC',flux(:,c) = HLLCflux(qL(:,c),qR(:,c),[0,1]); % HLLC
         end
@@ -465,10 +465,6 @@ global gamma
 R=3; EE=4; I=R:N-R; % R: substencil size, E: system components;
 epweno=1E-40; gamma1=gamma-1;
 
-evr=zeros(4,4,N-1);
-evl=zeros(4,4,N-1);
-h=zeros(2,N-1);
-
 % compute and store the differences for the entire domain
 dq = q(:,2:N,:)-q(:,1:N-1,:); % dq_{j+1/2}
     
@@ -478,7 +474,7 @@ qL = (-q(:,I-1,:)+7*(q(:,I,:)+q(:,I+1,:))-q(:,I+2,:))/12; qR = qL; % dq_{j+1/2}
 % Compute eigenvectors at the cell interfaces j+1/2
 for j = 1:size(q,1)
     for i = I
-        % Using simple mean
+        % 1. Using simple mean
         r = (q(j,i,1)+q(j,i+1,1))/2;
         u = (q(j,i,2)+q(j,i+1,2))/(2*r);
         v = (q(j,i,3)+q(j,i+1,3))/(2*r);
@@ -489,7 +485,7 @@ for j = 1:size(q,1)
         c2 = gamma1*(H-U);
         c = sqrt(gamma*p/r);
 
-        % Compute properties at cell interfaces using Roe avegares
+        % 2. Compute properties at cell interfaces using Roe avegares
 
         % Construct matrix of right eigenvectors
         %      _                     _ 
@@ -505,7 +501,7 @@ for j = 1:size(q,1)
         %
         % where q = 0.5*(u^2+v^2) 
 
-        evr(:,:,i) = [...
+        evr = [...
               1  , 1 , 0 ,  1  ;...
              u-c , u , 0 , u+c ;...
               v  , v , 1 ,  v  ;...
@@ -531,65 +527,60 @@ for j = 1:size(q,1)
         %
         % where q = 0.5*(u^2+v^2) 
 
-        evl(:,:,i) = [...
+        evl = [...
              (U*gamma1+c*u)/(2*c2),-(c+u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2);...
              (c2 - U*gamma1)/c2   ,   (u*gamma1)/c2    , (v*gamma1)/c2    ,-(gamma1)/c2  ;...
                     -v            ,         0          ,         1        ,        0     ;...
              (U*gamma1-c*u)/(2*c2), (c-u*gamma1)/(2*c2),-(v*gamma1)/(2*c2), gamma1/(2*c2)];
-    end
-end
+         
+        % 3. Compute the nonlinear part of the reconstruction
 
-% Produce the WENO reconstruction
-for ip=1:EE
-    
-    % Project the jumps at faces to the left characteristic space: qs
-    for m2 =-2:2
-       for i = I
-          qs(m2+R,i) = 0;
-          for e=1:EE      
-            qs(m2+R,i) = qs(m2+R,i) + evl(ip,e,i)*dq(e,i+m2);
-          end
-       end
-    end
+        % Project the jumps in the components to the right eigenvector space
+        dqs=evl*squeeze(dq(j,-2+i:i+2,:))';
+        
+        % Reconstruct for $q_{i+1/2}^{-}$
+        AmB=(dqs(:,1)-dqs(:,2));
+        BmC=(dqs(:,2)-dqs(:,3));
+        CmD=(dqs(:,3)-dqs(:,4));
 
-    % the reconstruction
-    for idx=1:2
+        IS1=13*AmB.^2+3*(  dqs(:,1)-3*dqs(:,2)).^2;
+        IS2=13*BmC.^2+3*(  dqs(:,2)+  dqs(:,3)).^2;
+        IS3=13*CmD.^2+3*(3*dqs(:,3)-  dqs(:,4)).^2;
 
-        % idx=1: construct hn (qL)
-        % idx=2: construct hp (qR)
+        IS1=(epweno+IS1).^2;
+        IS2=(epweno+IS2).^2;
+        IS3=(epweno+IS3).^2;
+        s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
+        ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
+        
+        h=evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        for e=1:EE
+            qL(j,i+1-R,e) = qL(j,i+1-R,e) - h(e);
+        end
 
-        im=(-1)^(idx+1); i1=im+R; in1=-im+R; in2=-2*im+R;
+        % Reconstruct for $q_{i+1/2}^{+}$
+        AmB=(dqs(:,5)-dqs(:,4));
+        BmC=(dqs(:,4)-dqs(:,3));
+        CmD=(dqs(:,3)-dqs(:,2));
 
-        for i=I
+        IS1=13*AmB.^2+3*(  dqs(:,5)-3*dqs(:,4)).^2;
+        IS2=13*BmC.^2+3*(  dqs(:,4)+  dqs(:,3)).^2;
+        IS3=13*CmD.^2+3*(3*dqs(:,3)-  dqs(:,2)).^2;
 
-            AmB=im*(qs(in2,i)-qs(in1,i));
-            BmC=im*(qs(in1,i)-qs( R ,i));
-            CmD=im*(qs( R ,i)-qs( i1,i));
-
-            IS1=13*AmB^2+3*(  qs(in2,i)-3*qs(in1,i))^2;
-            IS2=13*BmC^2+3*(  qs(in1,i)+  qs( R ,i))^2;
-            IS3=13*CmD^2+3*(3*qs( R ,i)-  qs( i1,i))^2;
-
-            IS1=(epweno+IS1)^2;
-            IS2=(epweno+IS2)^2;
-            IS3=(epweno+IS3)^2;
-            s1=IS2*IS3; s2=6*IS1*IS3; s3=3*IS1*IS2;
-            st0=1/(s1+s2+s3); s1=s1*st0; s3=s3*st0;
-
-            h(idx,i) = (s1*(BmC-AmB)+(0.5*s3-0.25)*(CmD-BmC))/3;
-
-        end % loop over interfaces
-    end % loop over each side of interface
-
-    % Project to the physical space:
-    for e=1:EE
-        for i=I
-            qL(e,i+1-R) = qL(e,i+1-R) + evr(e,ip,i)*h(1,i);
-            qR(e,i+1-R) = qR(e,i+1-R) + evr(e,ip,i)*h(2,i);
+        IS1=(epweno+IS1).^2;
+        IS2=(epweno+IS2).^2;
+        IS3=(epweno+IS3).^2;
+        s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
+        ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
+        
+        h = evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        for e=1:EE
+            qR(j,i+1-R,e) = qR(j,i+1-R,e) + h(e);
         end
     end
-end
-
+end % Characteristic Reconstruction
+qL= reshape(qL,[],4)';
+qR= reshape(qR,[],4)';
 end
 
 function [qL,qR] = WENO5charWiseRecon_Y(q,N)
@@ -609,10 +600,6 @@ global gamma
 R=3; EE=4; I=R:N-R; % R: substencil size, E: system components;
 epweno=1E-40; gamma1=gamma-1;
 
-evr=zeros(4,4,N-1);
-evl=zeros(4,4,N-1);
-h=zeros(2,N-1);
-
 % compute and store the differences for the entire domain
 dq = q(2:N,:,:)-q(1:N-1,:,:); % dq_{j+1/2}
     
@@ -620,116 +607,114 @@ dq = q(2:N,:,:)-q(1:N-1,:,:); % dq_{j+1/2}
 qL = (-q(I-1,:,:)+7*(q(I,:,:)+q(I+1,:,:))-q(I+2,:,:))/12; qR = qL; % dq_{j+1/2}
 
 % Compute eigenvectors at the cell interfaces j+1/2
-for i = I
-    % Using simple mean
-    r = (q(1,i)+q(1,i+1))/2;
-    u = (q(2,i)+q(2,i+1))/(2*r);
-    v = (q(3,i)+q(3,i+1))/(2*r);
-    E = (q(4,i)+q(4,i+1))/2;
-    U = 0.5*(u^2+v^2);
-    p = gamma1*(E-r*U);
-    H = (E+p)/r;
-    c2 = gamma1*(H-U);
-    c = sqrt(gamma*p/r);
-    
-    % Compute properties at cell interfaces using Roe avegares
-    
-    % Construct matrix of right eigenvectors
-    %      _                    _ 
-    %     |                      |
-    %     |   1    0   1    1    |
-    %     |                      |
-    %     |   u    1   u    u    |
-    %     |                      |
-    % R = |  v-c   0   v   v+c   |
-    %     |                      |
-    %     |  H-vc  u   q   H+vc  |
-    %     |_                    _|
-    %
-    % where q = 0.5*(u^2+v^2) 
-    
-    evr(:,:,i) = [...
-          1  , 0 , 1 ,  1   ;...
-          u  , 1 , u ,  u   ;...
-         v-c , 0 , v , v+c  ;...
-        H-v*c, u , U ,H+v*c];
+for j = 1:size(q,2)
+    for i = I
+        % 1. Using simple mean
+        r = (q(i,j,1)+q(i+1,j,1))/2;
+        u = (q(i,j,2)+q(i+1,j,2))/(2*r);
+        v = (q(i,j,3)+q(i+1,j,3))/(2*r);
+        E = (q(i,j,4)+q(i+1,j,4))/2;
+        U = 0.5*(u^2+v^2);
+        p = gamma1*(E-r*U);
+        H = (E+p)/r;
+        c2 = gamma1*(H-U);
+        c = sqrt(gamma*p/r);
 
-    % Construct matrix of left eigenvectors
-    %         _                                        _ 
-    %        |                                          |
-    %        | (g-1)*q+c*v  -(g-1)*u  -(g-1)*v-c  (g-1) |
-    %        |  ----------   -------   ---------  ----- |
-    %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
-    %        |                                          |
-    % R^{-1}=|      -u          1          0       0    |
-    %        |                                          |
-    %        | c^2-(g-1)*q   (g-1)*u    (g-1)*v  -(g-1) |
-    %        |  ----------   -------    -------   ----- |
-    %        |      c^2        c^2        c^2      c^2  |
-    %        |                                          |
-    %        | (g-1)*q-c*v  -(g-1)*u  -(g-1)*v+c  (g-1) |
-    %        |  ----------   -------   ---------  ----- |
-    %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
-    %        |_                                        _|
-    %
-    % where q = 0.5*(u^2+v^2) 
+        % 2. Compute properties at cell interfaces using Roe avegares
 
-    evl = [...
-        (U*gamma1+c*v)/(2*c2),-(u*gamma1)/(2*c2),-(c+v*gamma1)/(2*c2), gamma1/(2*c2);...
-               -u            ,         1        ,         0          ,        0     ;...
-          (c2-U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
-        (U*gamma1-c*v)/(2*c2),-(u*gamma1)/(2*c2), (c-v*gamma1)/(2*c2), gamma1/(2*c2)];
-end
+        % Construct matrix of right eigenvectors
+        %      _                    _ 
+        %     |                      |
+        %     |   1    0   1    1    |
+        %     |                      |
+        %     |   u    1   u    u    |
+        %     |                      |
+        % R = |  v-c   0   v   v+c   |
+        %     |                      |
+        %     |  H-vc  u   q   H+vc  |
+        %     |_                    _|
+        %
+        % where q = 0.5*(u^2+v^2) 
 
-% Produce the WENO reconstruction
-for ip=1:EE
-    
-    % Project the jumps at faces to the left characteristic space: qs
-    for m2 =-2:2
-       for i = I
-          qs(m2+R,i) = 0;
-          for e=1:EE      
-            qs(m2+R,i) = qs(m2+R,i) + evl(ip,e,i)*dq(e,i+m2);
-          end
-       end
-    end
+        evr = [...
+              1  , 0 , 1 ,  1   ;...
+              u  , 1 , u ,  u   ;...
+             v-c , 0 , v , v+c  ;...
+            H-v*c, u , U ,H+v*c];
 
-    % the reconstruction
-    for idx=1:2
+        % Construct matrix of left eigenvectors
+        %         _                                        _ 
+        %        |                                          |
+        %        | (g-1)*q+c*v  -(g-1)*u  -(g-1)*v-c  (g-1) |
+        %        |  ----------   -------   ---------  ----- |
+        %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
+        %        |                                          |
+        % R^{-1}=|      -u          1          0       0    |
+        %        |                                          |
+        %        | c^2-(g-1)*q   (g-1)*u    (g-1)*v  -(g-1) |
+        %        |  ----------   -------    -------   ----- |
+        %        |      c^2        c^2        c^2      c^2  |
+        %        |                                          |
+        %        | (g-1)*q-c*v  -(g-1)*u  -(g-1)*v+c  (g-1) |
+        %        |  ----------   -------   ---------  ----- |
+        %        |    2*c^2       2*c^2      2*c^2    2*c^2 |
+        %        |_                                        _|
+        %
+        % where q = 0.5*(u^2+v^2) 
 
-        % idx=1: construct hn (qL)
-        % idx=2: construct hp (qR)
+        evl = [...
+            (U*gamma1+c*v)/(2*c2),-(u*gamma1)/(2*c2),-(c+v*gamma1)/(2*c2), gamma1/(2*c2);...
+                   -u            ,         1        ,         0          ,        0     ;...
+              (c2-U*gamma1)/c2   ,   (u*gamma1)/c2  ,   (v*gamma1)/c2    ,-(gamma1)/c2  ;...
+            (U*gamma1-c*v)/(2*c2),-(u*gamma1)/(2*c2), (c-v*gamma1)/(2*c2), gamma1/(2*c2)];
+        
+        % 3. Compute the nonlinear part of the reconstruction
 
-        im=(-1)^(idx+1); i1=im+R; in1=-im+R; in2=-2*im+R;
+        % Project the jumps in the components to the right eigenvector space
+        dqs=evl*squeeze(dq(-2+i:i+2,j,:))';
+        
+        % Reconstruct for $q_{i+1/2}^{-}$
+        AmB=(dqs(:,1)-dqs(:,2));
+        BmC=(dqs(:,2)-dqs(:,3));
+        CmD=(dqs(:,3)-dqs(:,4));
 
-        for i=I
+        IS1=13*AmB.^2+3*(  dqs(:,1)-3*dqs(:,2)).^2;
+        IS2=13*BmC.^2+3*(  dqs(:,2)+  dqs(:,3)).^2;
+        IS3=13*CmD.^2+3*(3*dqs(:,3)-  dqs(:,4)).^2;
 
-            AmB=im*(qs(in2,i)-qs(in1,i));
-            BmC=im*(qs(in1,i)-qs( R ,i));
-            CmD=im*(qs( R ,i)-qs( i1,i));
-
-            IS1=13*AmB^2+3*(  qs(in2,i)-3*qs(in1,i))^2;
-            IS2=13*BmC^2+3*(  qs(in1,i)+  qs( R ,i))^2;
-            IS3=13*CmD^2+3*(3*qs( R ,i)-  qs( i1,i))^2;
-
-            IS1=(epweno+IS1)^2;
-            IS2=(epweno+IS2)^2;
-            IS3=(epweno+IS3)^2;
-            s1=IS2*IS3; s2=6*IS1*IS3; s3=3*IS1*IS2;
-            st0=1/(s1+s2+s3); s1=s1*st0; s3=s3*st0;
-
-            h(idx,i) = (s1*(BmC-AmB)+(0.5*s3-0.25)*(CmD-BmC))/3;
-
-        end % loop over interfaces
-    end % loop over each side of interface
-
-    % Project to the physical space:
-    for e=1:EE
-        for i=I
-            qL(e,i+1-R) = qL(e,i+1-R) + evr(e,ip,i)*h(1,i);
-            qR(e,i+1-R) = qR(e,i+1-R) + evr(e,ip,i)*h(2,i);
+        IS1=(epweno+IS1).^2;
+        IS2=(epweno+IS2).^2;
+        IS3=(epweno+IS3).^2;
+        s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
+        ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
+        
+        h=evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        for e=1:EE
+            qL(i+1-R,j,e) = qL(i+1-R,j,e) - h(e);
         end
-    end
-end
 
+        % Reconstruct for $q_{i+1/2}^{+}$
+        AmB=(dqs(:,5)-dqs(:,4));
+        BmC=(dqs(:,4)-dqs(:,3));
+        CmD=(dqs(:,3)-dqs(:,2));
+
+        IS1=13*AmB.^2+3*(  dqs(:,5)-3*dqs(:,4)).^2;
+        IS2=13*BmC.^2+3*(  dqs(:,4)+  dqs(:,3)).^2;
+        IS3=13*CmD.^2+3*(3*dqs(:,3)-  dqs(:,2)).^2;
+
+        IS1=(epweno+IS1).^2;
+        IS2=(epweno+IS2).^2;
+        IS3=(epweno+IS3).^2;
+        s1=IS2.*IS3; s2=6*IS1.*IS3; s3=3*IS1.*IS2;
+        ts0=1./(s1+s2+s3); s1=s1.*ts0; s3=s3.*ts0;
+        
+        h = evr*(s1.*(AmB-BmC)+(0.5*s3-0.25).*(BmC-CmD))/3;
+        for e=1:EE
+            qR(i+1-R,j,e) = qR(i+1-R,j,e) + h(e);
+        end
+        
+    end
+end % Characteristic Reconstruction
+qL= reshape(qL,[],4)';
+qR= reshape(qR,[],4)';
 end

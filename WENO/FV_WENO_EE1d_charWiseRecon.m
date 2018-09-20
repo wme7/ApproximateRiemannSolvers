@@ -68,7 +68,7 @@ res=zeros(size(q)); flux=zeros(size(qR)); nf=nx+1-2*R;
         switch fluxMethod
             case 'LF',  flux(:,j) = LFflux(qL(:,j),qR(:,j),a); % LF
             case 'ROE', flux(:,j) = ROEflux(qL(:,j),qR(:,j));  % Roe
-            case 'RUS', flux(:,j) = RUSflux(qL(:,j),qR(:,j));  % Rusanov
+            case 'LLF', flux(:,j) = RUSflux(qL(:,j),qR(:,j));  % Rusanov
             case 'HLLE',flux(:,j) = HLLEflux(qL(:,j),qR(:,j)); % HLLE
             case 'AUSM',flux(:,j) = AUSMflux(qL(:,j),qR(:,j)); % AUSM
             case 'HLLC',flux(:,j) = HLLCflux(qL(:,j),qR(:,j)); % HLLC
