@@ -33,9 +33,9 @@ tEnd    = 0.25;    % Final time
 nx      = 201;     % Number of cells/Elements in x
 ny      = 201;     % Number of cells/Elements in y
 n       = 5;       % Degrees of freedom: ideal air=5, monoatomic gas=3.
-IC      = 06;      % 19 IC cases are available
-fspltMth='RUS';     % LF, RUS.
-reconMth='WENO7';  % WENO5, WENO7, Poly5, Poly7;
+IC      = 'Sod_x';      % 19 IC cases are available
+fspltMth='LF';     % LF, RUS.
+reconMth='WENO5';  % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Visualize evolution of domain
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -65,8 +65,8 @@ a0 = max(abs([lambda1(:);lambda2(:)]));
 dt0=CFL*min(dx./a0,dy./a0); 
 
 % Initialize parpool
-poolobj = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(poolobj); parpool('local',2); end
+% poolobj = gcp('nocreate'); % If no pool, do not create new one.
+% if isempty(poolobj); parpool('local',4); end
 
 % Configure figure 
 if plotFig
@@ -107,8 +107,8 @@ while t < tEnd
     L=FD_EE2d(q,a,nx,ny,dx,dy,t,fspltMth,reconMth,'Riemann'); q=(qo+2*(q-dt*L))/3;
     
 	% Compute flow properties
-    r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4);
-    p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2)); c=sqrt(gamma*p./r);
+    r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4); p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2)); 
+    c=sqrt(gamma*p./r);
     
     % Update dt and time
     vn=sqrt(u.^2+v.^2); lambda1=vn+c; lambda2=vn-c;
@@ -132,7 +132,7 @@ cputime = toc; disp(['CPU time: ',num2str(cputime),' s']);
 q=q(in,jn,:); nx=nx-2*R; ny=ny-2*R; 
 
 % compute flow properties
-r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4)./r; p=(gamma-1)*r.*(E-0.5*(u.^2+v.^2));
+r=q(:,:,1); u=q(:,:,2)./r; v=q(:,:,3)./r; E=q(:,:,4); p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2));
 
 %% Calculation of flow parameters
 c = sqrt(gamma*p./r);   % Speed of sound

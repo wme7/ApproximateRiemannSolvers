@@ -164,7 +164,7 @@ R=3; I=R:N-R; % nf=N+1-2*R; % All internal faces
 epweno=1E-40; gamma1=gamma-1;
 
 % Cell interface properties method
-averageMth='roe';
+averageMth='simple';
 
 % Compute flux differences for the entire domain
 dfp = fp(:,2:N)-fp(:,1:N-1); % df{+}_{j+1/2}

@@ -30,11 +30,11 @@ global gamma preshock postshock mesh_wedge_position shock_speed
 %% Parameters
 CFL     = 0.475;   % CFL number
 tEnd    = 0.20;    % Final time
-nx      = 241;     % Number of cells/Elements in x
-ny      = 061;     % Number of cells/Elements in y
+nx      = 481;     % Number of cells/Elements in x
+ny      = 121;     % Number of cells/Elements in y
 n       = 5;       % Degrees of freedom: ideal air=5, monoatomic gas=3.
-fspltMth='LF';     % LF, RUS.
-reconMth='WENO5';  % WENO5, WENO7, Poly5, Poly7;
+fspltMth='RUS';     % LF, RUS.
+reconMth='WENO7';  % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Visualize evolution of domain
 
 % Ratio of specific heats for ideal di-atomic gas
@@ -70,7 +70,7 @@ dt0=CFL*min(dx./a0,dy./a0);
 
 % Initialize parpool
 poolobj = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(poolobj); parpool('local',2); end
+if isempty(poolobj); parpool('local',4); end
 
 % Configure figure 
 if plotFig
@@ -82,7 +82,7 @@ if plotFig
 end
 
 % Select Solver
-solver = 2;
+solver = 1;
 switch solver
     case 1, FD_EE2d = @FD_WENO_EE2d; % Component-wise reconstruction
     case 2, FD_EE2d = @FD_WENO_EE2d_CharactRecon; % Characteristic-wise reconstruction

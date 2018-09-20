@@ -161,19 +161,26 @@ switch input
         u = [0.0  0.0 0.0     0.0   ];
         v = [0.3 -0.3 0.2145 -0.4259];
         
-    case 'test'
-        fprintf('Sods Shocktube configuration in 2d \n');
+    case 'Sod_x'
+        fprintf('Sods Shocktube in the x-direction (2-d test) \n');
         p = [0.1   1 1 0.1  ];
         r = [0.125 1 1 0.125];
         u = [0     0 0 0    ];
         v = [0     0 0 0    ];
         
-    case 'test2'
-        fprintf('Sods Shocktube configuration in 2d \n');
+    case 'Sod_y'
+        fprintf('Sods Shocktube in the y-direction (2-d test) \n');
         p = [1 1 0.1   0.1  ];
         r = [1 1 0.125 0.125] ;
         u = [0 0 0     0    ];
-        v = [0 0 0     0    ];  
+        v = [0 0 0     0    ];
+        
+    case 'constant'
+        fprintf('constant state (2-d test) \n');
+        p = [0.1   0.1   0.1   0.1  ];
+        r = [0.125 0.125 0.125 0.125] ;
+        u = [0     0     0     0    ];
+        v = [0     0     0     0    ];  
         
     otherwise
         error('only 18 cases are available');

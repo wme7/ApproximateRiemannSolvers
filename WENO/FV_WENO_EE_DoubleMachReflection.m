@@ -33,7 +33,7 @@ tEnd    = 0.20;   % Final time;
 nx      = 240;    % Number of cells/Elements in x;
 ny      = 060;    % Number of cells/Elements in y;
 n       = 5;      % Degrees of freedom: ideal air=5, monoatomic gas=3;
-fluxMth ='LF';    % LF, RUS, ROE, HLLE, HLLC;
+fluxMth ='RUS';   % LF, RUS, ROE, HLLE, HLLC;
 reconMth='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true ;  % Visualize evolution of domain.
 
@@ -69,8 +69,8 @@ a0 = max(abs([lambda1(:);lambda2(:)]));
 dt0=CFL*min(dx./a0,dy./a0); 
 
 % Initialize parpool
-% poolobj = gcp('nocreate'); % If no pool, do not create new one.
-% if isempty(poolobj); parpool('local',4); end
+poolobj = gcp('nocreate'); % If no pool, do not create new one.
+if isempty(poolobj); parpool('local',4); end
 
 % Configure figure 
 if plotFig
@@ -113,8 +113,8 @@ while t < tEnd
     L=FV_EE2d(q,a,nx,ny,dx,dy,t,fluxMth,reconMth,'DMR'); q=(qo+2*(q-dt*L))/3;
     
 	% Compute flow properties
-    r=q(in,jn,1); u=q(in,jn,2)./r; v=q(in,jn,3)./r; E=q(in,jn,4);
-    p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2)); c=sqrt(gamma*p./r);
+    r=q(in,jn,1); u=q(in,jn,2)./r; v=q(in,jn,3)./r; E=q(in,jn,4); p=(gamma-1)*(E-0.5*r.*(u.^2+v.^2)); 
+    c=sqrt(gamma*p./r); if min(p(:))<0; error('negative pressure found!'); end
     
     % Update dt and time
     vn=sqrt(u.^2+v.^2); lambda1=vn+c; lambda2=vn-c;
