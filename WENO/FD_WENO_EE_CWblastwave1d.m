@@ -43,7 +43,7 @@ CFL     = 0.60;	  % CFL number;
 tFinal	= 0.038;  % Final time;
 nx      = 401;    % Number of nodes;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
-fsplit  ='LF';    % LF, RUS, SHLL; 
+fsplit  ='LF';    % LF, LLF, SHLL; 
 recon   ='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;
 

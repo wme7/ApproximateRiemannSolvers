@@ -33,8 +33,8 @@ tEnd    = 0.25;    % Final time
 nx      = 201;     % Number of cells/Elements in x
 ny      = 201;     % Number of cells/Elements in y
 n       = 5;       % Degrees of freedom: ideal air=5, monoatomic gas=3.
-IC      = 'Sod_x';      % 19 IC cases are available
-fspltMth='LF';     % LF, RUS.
+IC      = 05;      % 19 IC cases are available
+fspltMth='LF';     % LF, LLF.
 reconMth='WENO5';  % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;   % Visualize evolution of domain
 

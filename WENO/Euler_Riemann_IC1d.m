@@ -110,8 +110,8 @@ p0 = zeros(size(x));
 
 % Parameters of regions dimensions
 x_middle = (x(end)-x(1))/2;
-L = find(x<=x_middle);
-R = find(x>x_middle);
+L = find(x<x_middle);
+R = find(x>=x_middle);
 
 % Initial Condition for our 2D domain
 % Density

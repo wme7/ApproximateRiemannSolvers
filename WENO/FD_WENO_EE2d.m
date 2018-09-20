@@ -84,7 +84,7 @@ global preshock postshock mesh_wedge_position
     % normals = {[1,0], [0,1]}; % i.e.: x-axis, y-axis
     switch fsplitMth
         case 'LF',  [fp,fm] = LF(a,q(ic,:,:),[1,0]);    % Lax-Friedrichs (LF) Flux Splitting
-        case 'RUS', [fp,fm] = Rusanov(q(ic,:,:),[1,0]); % Rusanov (Rus) Flux Splitting
+        case 'LLF', [fp,fm] = Rusanov(q(ic,:,:),[1,0]); % Local Lax-Friedrichs (LF) Flux Splitting
         otherwise, error('Splitting method not set.');
     end
 
@@ -124,7 +124,7 @@ global preshock postshock mesh_wedge_position
     ic=R+1:nx-R;
     switch fsplitMth
         case 'LF',  [fp,fm] = LF(a,q(:,ic,:),[0,1]);    % Lax-Friedrichs (LF) Flux Splitting
-        case 'RUS', [fp,fm] = Rusanov(q(:,ic,:),[0,1]); % Rusanov (Rus) Flux Splitting
+        case 'LLF', [fp,fm] = Rusanov(q(:,ic,:),[0,1]); % Local Lax-Friedrichs (LF) Flux Splitting
         otherwise, error('Splitting method not set.');
     end
 

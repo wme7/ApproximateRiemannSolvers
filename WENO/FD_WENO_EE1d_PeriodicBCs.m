@@ -11,7 +11,7 @@ function res = FD_WENO_EE1d_PeriodicBCs(a,q,~,dx,fsplitMth,Recon,~)
 % 1. Produce flux splitting 
 switch fsplitMth
     case 'LF',  [fp,fm] = LF(a,q);    % Lax-Friedrichs (LF) Flux Splitting
-    case 'RUS', [fp,fm] = Rusanov(q); % Rusanov (Rus) Flux Splitting
+    case 'LLF', [fp,fm] = Rusanov(q); % Rusanov (Rus) Flux Splitting
     case 'SHLL',[fp,fm] = SHLL(q);    % Split HLL (SHLL) flux 
     otherwise, error('Splitting method not set.');
 end

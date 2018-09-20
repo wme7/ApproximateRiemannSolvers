@@ -121,49 +121,49 @@ global preshock postshock mesh_wedge_position
         end
     end
     
-% % 5. Produce flux splitting in y-direction
-% 
-% 	% Clear flux variables
-%     clear flux fp fm;
-% 
-%     % we only consider internal cells
-%     ic=R+1:nx-R;
-%     switch fsplitMth
-%         case 'LF',  [fp,fm] = LF(a,q(:,ic,:),[0,1]);    % Lax-Friedrichs (LF) Flux Splitting
-%         case 'RUS', [fp,fm] = Rusanov(q(:,ic,:),[0,1]); % Rusanov (Rus) Flux Splitting
-%         otherwise, error('Splitting method not set.');
-%     end
-% 
-% % 6. Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
-%     switch Recon
-%         case 'WENO5', [flux] = WENO5charWiseRecon_Y(q(:,ic,:),fp,fm,ny);
-%         %case 'WENO7', [flux] = WENO7charWiseRecon_Y(q(:,ic,:),fp,fm,ny);
-%     end
-% 
-% % 7. Compute finite volume residual term, dg/dy.
-%     nc=nx-2*R; nf=ny+1-2*R;
-%     
-%     % Flux contribution to the residual of every cell
-% %     for e=1:E
-% %         for i=1:nc % for all interior cells
-% %             res(R+1,i+R,e) = res(R+1,i+R,e) - flux(e,1+nf*(i-1))/dy;
-% %             for j=2:nf-1 % for all interior cells
-% %                 res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(e,j+nf*(i-1))/dy;
-% %                 res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(e,j+nf*(i-1))/dy;
-% %             end
-% %             res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(e,nf+nf*(i-1))/dy;
-% %         end
-% %     end
+% 5. Produce flux splitting in y-direction
+
+	% Clear flux variables
+    clear flux fp fm;
+
+    % we only consider internal cells
+    ic=R+1:nx-R;
+    switch fsplitMth
+        case 'LF',  [fp,fm] = LF(a,q(:,ic,:),[0,1]);    % Lax-Friedrichs (LF) Flux Splitting
+        case 'RUS', [fp,fm] = Rusanov(q(:,ic,:),[0,1]); % Rusanov (Rus) Flux Splitting
+        otherwise, error('Splitting method not set.');
+    end
+
+% 6. Reconstruct interface values: qL=q_{j+1/2}^{-} and qR=q_{j-1/2}^{+}
+    switch Recon
+        case 'WENO5', [flux] = WENO5charWiseRecon_Y(q(:,ic,:),fp,fm,ny);
+        %case 'WENO7', [flux] = WENO7charWiseRecon_Y(q(:,ic,:),fp,fm,ny);
+    end
+
+% 7. Compute finite volume residual term, dg/dy.
+    nc=nx-2*R; nf=ny+1-2*R;
+    
+    % Flux contribution to the residual of every cell
 %     for e=1:E
 %         for i=1:nc % for all interior cells
-%             res(R+1,i+R,e) = res(R+1,i+R,e) - flux(1,i,e)/dy;
+%             res(R+1,i+R,e) = res(R+1,i+R,e) - flux(e,1+nf*(i-1))/dy;
 %             for j=2:nf-1 % for all interior cells
-%                 res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(j,i,e)/dy;
-%                 res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(j,i,e)/dy;
+%                 res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(e,j+nf*(i-1))/dy;
+%                 res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(e,j+nf*(i-1))/dy;
 %             end
-%             res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(nf,i,e)/dy;
+%             res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(e,nf+nf*(i-1))/dy;
 %         end
 %     end
+    for e=1:E
+        for i=1:nc % for all interior cells
+            res(R+1,i+R,e) = res(R+1,i+R,e) - flux(1,i,e)/dy;
+            for j=2:nf-1 % for all interior cells
+                res(j+R-1,i+R,e) = res(j+R-1,i+R,e) + flux(j,i,e)/dy;
+                res( j+R ,i+R,e) = res( j+R ,i+R,e) - flux(j,i,e)/dy;
+            end
+            res(ny-R,i+R,e) = res(ny-R,i+R,e) + flux(nf,i,e)/dy;
+        end
+    end
 
 end % FDM WENO
 
@@ -324,8 +324,8 @@ for j = 1:size(q,1)
         % 3. Compute the nonlinear part of the reconstruction
 
         % Project the splitted flux jumps to the right eigenvector space
-        dfps=evl*squeeze(dfp(j,-2+i:i+1,:));
-        dfms=evl*squeeze(dfm(j,-1+i:i+2,:));
+        dfps=evl*squeeze(dfp(j,-2+i:i+1,:))';
+        dfms=evl*squeeze(dfm(j,-1+i:i+2,:))';
 
         % Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
         AmB=(dfps(:,1)-dfps(:,2));
@@ -464,8 +464,8 @@ for j =1:size(q,2)
         % 3. Compute the nonlinear part of the reconstruction
 
         % Project the splitted flux jumps to the right eigenvector space
-        dgps=evl*squeeze(dgp(-2+i:i+1,j,:));
-        dgms=evl*squeeze(dgm(-1+i:i+2,j,:));
+        dgps=evl*squeeze(dgp(-2+i:i+1,j,:))';
+        dgms=evl*squeeze(dgm(-1+i:i+2,j,:))';
 
         % Extrapolation $v_{i+1/2}^{-}$ == $f_{i+1/2}^{+}$
         AmB=(dgps(:,1)-dgps(:,2));

@@ -44,7 +44,7 @@ tFinal	= 0.12;	  % Final time;
 nx      = 201;    % Number of nodes;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
 IC      = 01;	  % 10 IC cases are available;
-fsplit  ='LF';    % LF, RUS, SHLL; 
+fsplit  ='LF';    % LF, LLF, SHLL; 
 recon   ='WENO5'; % WENO5, WENO7, Poly5, Poly7;
 plotFig = true;
 
