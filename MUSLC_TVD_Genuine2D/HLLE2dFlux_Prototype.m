@@ -5,7 +5,7 @@ global gamma; gamma = 1.4;
 
 % Build a 2x2 mesh
 dx=0.5; dy=0.5; [x,y]=meshgrid([0,1],[0,1]);
-[r0,u0,v0,p0] = Euler_IC2d(x,y,'Sod_y');
+[r0,u0,v0,p0] = Euler_IC2d(x,y,03);
 E0 = p0./(gamma-1)+0.5*r0.*(u0.^2+v0.^2); % Total Energy
 c0 = sqrt(gamma*p0./r0);                  % Speed of sound
 q0 = cat(3, r0, r0.*u0, r0.*v0, E0);      % initial state
@@ -216,7 +216,7 @@ gOO = (k21*b1 + k22*b2 + k23*b3 + k24*b4)/detM;
 disp('LSQ : q**, f**, g**');
 disp([qOO,fOO,gOO]);
 
-%% Form I
+%% Method I
 A1=[sSE+sSW-sNE-sNW,sNW+sSW-sNE-sSE;...
     sES+sWS-sEN-sWN,sWN+sWS-sEN-sES];
 
@@ -230,7 +230,7 @@ end
 disp('MthI : q**, f**, g**');
 disp([qOO,f00,g00]);
 
-%% Form II
+%% Method II
 % Precompute c1 and c2
 c1 = dq1*dq3*(qNO-qSO) + df1*dq3*fNO - df3*dq1*fSO + dg1*dq3*gNO - dg3*dq1*gSO;
 c2 = dq4*dq2*(qOE-qOW) + df4*dq2*fOE - df2*dq4*fOW + dg4*dq2*gOE - dg2*dq4*gOW;
