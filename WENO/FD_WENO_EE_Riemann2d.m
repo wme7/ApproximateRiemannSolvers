@@ -154,4 +154,4 @@ s3=subplot(2,3,3); contour(x,y,p,n); axis('square'); xlabel('x(m)'); ylabel('Pre
 s4=subplot(2,3,4); contour(x,y,ss,n);axis('square'); xlabel('x(m)'); ylabel('Entropy/R gas');
 s5=subplot(2,3,5); contour(x,y,M,n); axis('square'); xlabel('x(m)'); ylabel('Mach number');
 s6=subplot(2,3,6); contour(x,y,e,n); axis('square'); xlabel('x(m)'); ylabel('Internal Energy (kg/m^2s)');
-title(s1,[reconMth,'-',fspltMth,' FVS Riemann Config ',num2str(IC)]); title(s2,['time t=',num2str(t),'[s]']);
+title(s1,['FD ',reconMth,'-',fspltMth,' Riemann Config ',num2str(IC)]); title(s2,['time t=',num2str(t),'[s]']);
