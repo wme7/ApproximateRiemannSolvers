@@ -40,7 +40,7 @@ global gamma
 
 %% Parameters
 CFL     = 0.60;	  % CFL number;
-tFinal	= 0.038;  % Final time;
+tEnd	= 0.038;  % Final time;
 nx      = 401;    % Number of nodes;
 gamma   = 1.4;    % Ratio of specific heats for ideal di-atomic gas;
 fsplit  ='LF';    % LF, LLF, SHLL; 
@@ -57,7 +57,7 @@ a0 = sqrt(gamma*p0./r0);   % Speed of sound
 Q0=[r0; r0.*u0; E0];   % vec. of conserved properties
 
 % Load reference solution
-load('CWblastwaveRef.mat'); xe=x; re=r; pe=p; ue=u; ee = p./((gamma-1)*r); %tFinal=0.2;
+load('CWblastwaveRef.mat'); xe=x; re=r; pe=p; ue=u; ee=p./((gamma-1)*r); 
 
 % Set q-array & adjust grid for ghost cells
 switch recon
@@ -82,9 +82,9 @@ end
 % Load initial condition
 q=q0; it=0; dt=dt0; t=0; lambda=lambda0;
 
-while t<tFinal
+while t<tEnd
     % Iteration local time
-    if t+dt>tFinal; dt=tFinal-t; end; t=t+dt;
+    if t+dt>tEnd; dt=tEnd-t; end; t=t+dt;
  
     % RK Initial step
     qo = q;
